@@ -1,0 +1,67 @@
+@import "tailwindcss";
+
+@theme {
+  --font-mono: 'JetBrains Mono', 'Courier New', Courier, monospace;
+  --font-sans: 'Inter', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  
+  --color-bg: #E4E3E0;
+  --color-ink: #141414;
+  --color-line: #141414;
+  --color-accent: #F27D26;
+}
+
+body {
+  background-color: var(--color-bg);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+}
+
+/* Visible grid borders—don't hide the structure, celebrate it */
+.data-row {
+  display: grid;
+  padding: 1rem;
+  border-bottom: 1px solid var(--color-line);
+  transition: background 0.2s ease, color 0.2s ease;
+  cursor: pointer;
+}
+
+/* Invert on hover—creates strong interactive feedback */
+.data-row:hover {
+  background: var(--color-ink);
+  color: var(--color-bg);
+}
+
+.data-row:hover .col-header {
+  color: var(--color-bg);
+  opacity: 0.8;
+}
+
+/* Italic serif column headers—humanizes the data */
+.col-header {
+  font-family: 'Georgia', serif;
+  font-style: italic;
+  font-size: 11px;
+  opacity: 0.5;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+/* Monospace for data values—signals precision */
+.data-value {
+  font-family: var(--font-mono);
+  letter-spacing: -0.02em;
+}
+
+/* Custom scrollbar for technical feel */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: var(--color-bg);
+  border-left: 1px solid var(--color-line);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--color-ink);
+  border: 1px solid var(--color-bg);
+}
