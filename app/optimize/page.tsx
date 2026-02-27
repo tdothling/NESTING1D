@@ -1,18 +1,22 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, Suspense } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Navbar } from '@/components/Navbar';
 import { extractTableData } from '@/lib/gemini';
 import { optimizeCuts } from '@/lib/optimizer';
-import { getStock, addProject, updateStockFromOptimization } from '@/lib/store';
+import { getStock, addProject, updateProject, updateStockFromOptimization, getProjects, rollbackStock } from '@/lib/store';
 import { CutRequest, StockItem, OptimizationResult, Project } from '@/lib/types';
-import { Upload, Check, AlertCircle, ArrowRight, Save, Trash2, Plus, RefreshCw, ShoppingCart } from 'lucide-react';
+import { Upload, Check, AlertCircle, ArrowRight, Save, Trash2, Plus, RefreshCw, ShoppingCart, Download, MessageCircle } from 'lucide-react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
 
-export default function OptimizePage() {
+function OptimizeContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const projectId = searchParams.get('id');
   const [step, setStep] = useState<'upload' | 'review' | 'results'>('upload');
   const [loading, setLoading] = useState(false);
   const [requests, setRequests] = useState<CutRequest[]>([]);
@@ -22,20 +26,38 @@ export default function OptimizePage() {
   const [standardBarLengths, setStandardBarLengths] = useState<Record<string, number>>({});
   const [uniqueMaterials, setUniqueMaterials] = useState<string[]>([]);
   const [autoUpdateStock, setAutoUpdateStock] = useState(true);
+  const [maxScrapLength, setMaxScrapLength] = useState(1000);
+  const [globalMultiplier, setGlobalMultiplier] = useState(1);
 
   useEffect(() => {
     // Wrap in setTimeout to avoid synchronous state update warning
     const timer = setTimeout(() => {
       setStock(getStock());
+
+      if (projectId) {
+        const loadedProject = getProjects().find((p: Project) => p.id === projectId);
+        if (loadedProject) {
+          setProjectName(loadedProject.name);
+          setRequests(loadedProject.requests);
+          if (loadedProject.result) {
+            setResult(loadedProject.result);
+            setStep('results');
+          } else {
+            setStep('review');
+          }
+        } else {
+          toast.error('Projeto não encontrado');
+        }
+      }
     }, 0);
     return () => clearTimeout(timer);
-  }, []);
+  }, [projectId]);
 
   // Update unique materials when requests change
   useEffect(() => {
     const materials = Array.from(new Set(requests.map(r => r.material.trim()))).sort();
     setUniqueMaterials(materials);
-    
+
     // Initialize standard lengths if not set
     setStandardBarLengths(prev => {
       const next = { ...prev };
@@ -48,7 +70,7 @@ export default function OptimizePage() {
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     if (acceptedFiles.length === 0) return;
-    
+
     setLoading(true);
     try {
       const data = await extractTableData(acceptedFiles[0]);
@@ -65,7 +87,10 @@ export default function OptimizePage() {
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
     onDrop,
-    accept: { 'image/*': [] },
+    accept: {
+      'image/*': [],
+      'application/pdf': ['.pdf']
+    },
     multiple: false,
   });
 
@@ -74,22 +99,37 @@ export default function OptimizePage() {
       toast.error('Adicione itens para cortar.');
       return;
     }
-    
+
     setLoading(true);
     // Simulate slight delay for UX
     setTimeout(() => {
       try {
-        const optimization = optimizeCuts(requests, stock, { 
-          standardBarLengths, 
+        // If we are editing an existing project, rollback its stock effects before calculating
+        if (projectId) {
+          rollbackStock(projectId);
+          // After rollback, we must fetch the fresh stock, otherwise the optimization 
+          // will use the old state of the stock that doesn't include the rolled-back items.
+          setStock(getStock());
+        }
+
+        // Must take fresh stock dynamically if we just rolled back
+        const currentStock = projectId ? getStock() : stock;
+
+        const optimization = optimizeCuts(requests, currentStock, {
+          standardBarLengths,
           defaultStandardLength: 6000,
-          kerf: 3 
+          kerf: 3,
+          maxScrapLength: maxScrapLength
         });
         setResult({
-            bars: optimization.results,
-            totalWaste: optimization.results.reduce((acc, bar) => acc + bar.waste, 0),
-            totalStockUsed: optimization.results.length,
-            itemsNotFit: optimization.itemsNotFit,
-            purchaseList: optimization.purchaseList
+          bars: optimization.results,
+          totalWaste: optimization.results.reduce((acc, bar) => acc + bar.waste, 0),
+          totalTrueWaste: optimization.totalTrueWaste,
+          totalTrueWasteKg: optimization.totalTrueWasteKg,
+          totalReusableScrap: optimization.totalReusableScrap,
+          totalStockUsed: optimization.results.length,
+          itemsNotFit: optimization.itemsNotFit,
+          purchaseList: optimization.purchaseList
         });
         setStep('results');
         toast.success('Otimização concluída!');
@@ -104,29 +144,90 @@ export default function OptimizePage() {
 
   const handleSaveProject = () => {
     if (!result) return;
-    
+
     const project: Project = {
-      id: crypto.randomUUID(),
+      id: projectId || crypto.randomUUID(),
       name: projectName || `Projeto ${new Date().toLocaleDateString()}`,
       createdAt: new Date().toISOString(),
       requests,
       result
     };
-    
-    addProject(project);
-    
-    if (autoUpdateStock) {
-      updateStockFromOptimization(result);
-      toast.success('Projeto salvo e estoque atualizado!');
+
+    if (projectId) {
+      updateProject(project);
     } else {
-      toast.success('Projeto salvo!');
+      addProject(project);
     }
-    
+
+    if (autoUpdateStock) {
+      updateStockFromOptimization(result, project.id);
+      toast.success(projectId ? 'Projeto atualizado e estoque modificado!' : 'Projeto salvo e estoque atualizado!');
+    } else {
+      toast.success(projectId ? 'Projeto atualizado!' : 'Projeto salvo!');
+    }
+
     router.push('/');
   };
 
   const updateRequest = (id: string, field: keyof CutRequest, value: any) => {
     setRequests(requests.map(r => r.id === id ? { ...r, [field]: value } : r));
+  };
+
+  const handleDownloadPDF = () => {
+    if (!result || !result.purchaseList) return;
+
+    const doc = new jsPDF();
+
+    // Add Header
+    doc.setFontSize(20);
+    doc.setTextColor(40, 40, 40);
+    doc.text('Lista de Compras - NESTING1D', 14, 22);
+
+    doc.setFontSize(10);
+    doc.setTextColor(100, 100, 100);
+    doc.text(`Projeto: ${projectName || 'Novo Projeto'}`, 14, 30);
+    doc.text(`Data: ${new Date().toLocaleDateString()}`, 14, 35);
+
+    if (result.purchaseList.length === 0) {
+      doc.text('Nenhuma compra necessária para este projeto.', 14, 45);
+    } else {
+      // Create table
+      const tableColumn = ["Material", "Comprimento (mm)", "Quantidade"];
+      const tableRows = result.purchaseList.map(item => [
+        item.material,
+        item.length.toString(),
+        item.quantity.toString()
+      ]);
+
+      autoTable(doc, {
+        startY: 45,
+        head: [tableColumn],
+        body: tableRows,
+        theme: 'striped',
+        headStyles: { fillColor: [79, 70, 229] }, // Indigo-600 to match UI
+      });
+    }
+
+    doc.save(`Lista_Compras_${projectName || 'Projeto'}.pdf`);
+  };
+
+  const handleSendWhatsApp = () => {
+    if (!result || !result.purchaseList) return;
+
+    let message = `🛒 *Lista de Compras - NESTING1D*\n`;
+    message += `📁 Projeto: ${projectName || 'Novo Projeto'}\n\n`;
+
+    if (result.purchaseList.length === 0) {
+      message += `Tudo certo! Nenhuma compra necessária.\n`;
+    } else {
+      result.purchaseList.forEach((item, index) => {
+        message += `*${index + 1}. ${item.material}*\n`;
+        message += `📏 Comp: ${item.length}mm | 📦 Qtd: ${item.quantity}\n\n`;
+      });
+    }
+
+    const encodedMessage = encodeURIComponent(message);
+    window.open(`https://wa.me/?text=${encodedMessage}`, '_blank');
   };
 
   const removeRequest = (id: string) => {
@@ -143,13 +244,23 @@ export default function OptimizePage() {
     }]);
   };
 
+  const applyMultiplier = () => {
+    if (globalMultiplier <= 1) return;
+    setRequests(requests.map(req => ({
+      ...req,
+      quantity: req.quantity * globalMultiplier
+    })));
+    toast.success(`Quantidades multiplicadas por ${globalMultiplier}!`);
+    setGlobalMultiplier(1); // Reset after applying
+  };
+
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       <Navbar />
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
-          
+
           {/* Progress Steps */}
           <div className="mb-8">
             <div className="flex items-center justify-center space-x-4 font-mono text-sm">
@@ -173,8 +284,8 @@ export default function OptimizePage() {
           {/* Step 1: Upload */}
           {step === 'upload' && (
             <div className="max-w-xl mx-auto">
-              <div 
-                {...getRootProps()} 
+              <div
+                {...getRootProps()}
                 className={`border-2 border-dashed rounded-lg p-12 text-center cursor-pointer transition-colors
                   ${isDragActive ? 'border-[var(--color-accent)] bg-orange-50' : 'border-gray-300 hover:border-gray-400 bg-white'}`}
               >
@@ -187,13 +298,13 @@ export default function OptimizePage() {
                 ) : (
                   <div className="flex flex-col items-center">
                     <Upload className="w-10 h-10 text-gray-400 mb-4" />
-                    <p className="text-lg font-medium text-gray-900">Arraste uma imagem da tabela aqui</p>
+                    <p className="text-lg font-medium text-gray-900">Arraste uma imagem ou PDF da tabela aqui</p>
                     <p className="text-sm text-gray-500 mt-2">ou clique para selecionar</p>
-                    <p className="text-xs text-gray-400 mt-4 font-mono">Suporta PNG, JPG, WEBP</p>
+                    <p className="text-xs text-gray-400 mt-4 font-mono">Suporta PNG, JPG, WEBP e PDF</p>
                   </div>
                 )}
               </div>
-              
+
               <div className="mt-8 text-center">
                 <p className="text-sm text-gray-500 mb-4">- OU -</p>
                 <button
@@ -212,6 +323,39 @@ export default function OptimizePage() {
           {/* Step 2: Review */}
           {step === 'review' && (
             <div className="space-y-6">
+
+              {/* Multiplier Tool */}
+              <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-gray-900 font-mono">Multiplicador de Projeto</h3>
+                  <p className="text-xs text-gray-500">Vai produzir várias unidades iguais? Multiplique todas as quantidades de uma vez.</p>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <span className="text-sm text-gray-500 font-mono">x</span>
+                  <input
+                    type="number"
+                    min="1"
+                    className="w-20 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                    value={globalMultiplier}
+                    onChange={(e) => setGlobalMultiplier(Math.max(1, Number(e.target.value)))}
+                  />
+                  <button
+                    onClick={applyMultiplier}
+                    disabled={globalMultiplier <= 1 || requests.length === 0}
+                    className="inline-flex items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed hidden sm:inline-flex"
+                  >
+                    Aplicar a Todos
+                  </button>
+                  <button
+                    onClick={applyMultiplier}
+                    disabled={globalMultiplier <= 1 || requests.length === 0}
+                    className="inline-flex sm:hidden items-center px-3 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Aplicar
+                  </button>
+                </div>
+              </div>
+
               <div className="bg-white shadow rounded-lg border border-[var(--color-line)] overflow-hidden">
                 <div className="px-4 py-5 sm:px-6 flex justify-between items-center bg-gray-50 border-b border-[var(--color-line)]">
                   <h3 className="text-lg leading-6 font-medium text-gray-900 font-mono">Itens para Corte</h3>
@@ -219,7 +363,7 @@ export default function OptimizePage() {
                     <Plus className="h-3 w-3 mr-1" /> Adicionar
                   </button>
                 </div>
-                
+
                 <div className="overflow-x-auto">
                   <table className="min-w-full divide-y divide-gray-200">
                     <thead className="bg-gray-50">
@@ -227,6 +371,8 @@ export default function OptimizePage() {
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Material</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Comprimento (mm)</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Qtd</th>
+                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Peso (Kg/m)</th>
+                        <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-mono" title="Pular Otimização de Barra (ex: Chapas já cortadas)">Direto p/ Compra</th>
                         <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Descrição</th>
                         <th scope="col" className="relative px-6 py-3">
                           <span className="sr-only">Ações</span>
@@ -237,33 +383,51 @@ export default function OptimizePage() {
                       {requests.map((req) => (
                         <tr key={req.id}>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input 
-                              type="text" 
-                              value={req.material} 
+                            <input
+                              type="text"
+                              value={req.material}
                               onChange={(e) => updateRequest(req.id, 'material', e.target.value)}
                               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input 
-                              type="number" 
-                              value={req.length} 
+                            <input
+                              type="number"
+                              value={req.length}
                               onChange={(e) => updateRequest(req.id, 'length', Number(e.target.value))}
                               className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input 
-                              type="number" 
-                              value={req.quantity} 
+                            <input
+                              type="number"
+                              value={req.quantity}
                               onChange={(e) => updateRequest(req.id, 'quantity', Number(e.target.value))}
                               className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
                           </td>
                           <td className="px-6 py-4 whitespace-nowrap">
-                            <input 
-                              type="text" 
-                              value={req.description || ''} 
+                            <input
+                              type="number"
+                              step="0.01"
+                              value={req.weightKgM || ''}
+                              placeholder="Opcional"
+                              onChange={(e) => updateRequest(req.id, 'weightKgM', Number(e.target.value))}
+                              className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-center">
+                            <input
+                              type="checkbox"
+                              checked={req.skipOptimization || false}
+                              onChange={(e) => updateRequest(req.id, 'skipOptimization', e.target.checked)}
+                              className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
+                            />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <input
+                              type="text"
+                              value={req.description || ''}
                               onChange={(e) => updateRequest(req.id, 'description', e.target.value)}
                               className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                             />
@@ -284,7 +448,7 @@ export default function OptimizePage() {
               <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
                 <h3 className="text-lg font-medium text-gray-900 font-mono mb-4">Configurações de Otimização</h3>
                 <p className="text-sm text-gray-500 mb-4">Defina o comprimento padrão da barra de compra para cada material.</p>
-                
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                   {uniqueMaterials.map(material => (
                     <div key={material} className="bg-gray-50 p-3 rounded-md border border-gray-200">
@@ -306,6 +470,28 @@ export default function OptimizePage() {
                       </div>
                     </div>
                   ))}
+                </div>
+
+                <div className="mt-6 border-t border-gray-200 pt-6">
+                  <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                    <label htmlFor="max-scrap" className="block text-sm font-medium text-gray-700 font-mono mb-1">
+                      Comprimento Máximo de Sucata
+                    </label>
+                    <p className="text-xs text-gray-500 mb-3">Retalhos menores que este valor não retornarão ao estoque (considerados sucata/perda total).</p>
+                    <div className="relative rounded-md shadow-sm max-w-[200px]">
+                      <input
+                        type="number"
+                        id="max-scrap"
+                        className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                        placeholder="1000"
+                        value={maxScrapLength}
+                        onChange={(e) => setMaxScrapLength(Number(e.target.value))}
+                      />
+                      <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 sm:text-xs">mm</span>
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
 
@@ -341,19 +527,30 @@ export default function OptimizePage() {
               {/* Summary */}
               <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
                 <h2 className="text-lg font-medium text-gray-900 font-mono mb-4">Resumo da Otimização</h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-3">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
                   <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
                     <dt className="text-sm font-medium text-gray-500 truncate">Total de Barras Usadas</dt>
                     <dd className="mt-1 text-3xl font-semibold text-gray-900">{result.totalStockUsed}</dd>
                   </div>
                   <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                    <dt className="text-sm font-medium text-gray-500 truncate">Desperdício Total</dt>
-                    <dd className="mt-1 text-3xl font-semibold text-gray-900">{result.totalWaste} mm</dd>
+                    <dt className="text-sm font-medium text-gray-500 truncate">Sucata (Perda Real)</dt>
+                    <dd className="mt-1 text-3xl font-semibold text-red-600">
+                      {(result.totalTrueWaste / 1000).toFixed(2)} <span className="text-xl">m</span>
+                      {result.totalTrueWasteKg > 0 && (
+                        <span className="block text-sm text-red-500 font-normal">~ {result.totalTrueWasteKg} Kg</span>
+                      )}
+                    </dd>
+                  </div>
+                  <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
+                    <dt className="text-sm font-medium text-gray-500 truncate">Retalho Aproveitável</dt>
+                    <dd className="mt-1 text-3xl font-semibold text-amber-600">
+                      {(result.totalReusableScrap / 1000).toFixed(2)} <span className="text-xl">m</span>
+                    </dd>
                   </div>
                   <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
                     <dt className="text-sm font-medium text-gray-500 truncate">Aproveitamento</dt>
                     <dd className="mt-1 text-3xl font-semibold text-green-600">
-                      {Math.round((1 - (result.totalWaste / (result.bars.reduce((acc, b) => acc + b.length, 0) || 1))) * 100)}%
+                      {Math.round((1 - (result.totalTrueWaste / (result.bars.reduce((acc, b) => acc + b.length, 0) || 1))) * 100)}%
                     </dd>
                   </div>
                 </div>
@@ -388,8 +585,25 @@ export default function OptimizePage() {
                       </table>
                     </div>
                   ) : (
-                    <p className="text-sm text-gray-500">Nenhuma compra necessária. Todo o material foi retirado do estoque.</p>
+                    <p className="text-sm text-gray-500 mb-4">Nenhuma compra necessária. Todo o material foi retirado do estoque.</p>
                   )}
+
+                  <div className="mt-4 flex flex-wrap gap-3">
+                    <button
+                      onClick={handleDownloadPDF}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                    >
+                      <Download className="h-4 w-4 mr-2" />
+                      Baixar PDF
+                    </button>
+                    <button
+                      onClick={handleSendWhatsApp}
+                      className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#25D366] hover:bg-[#128C7E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#25D366]"
+                    >
+                      <MessageCircle className="h-4 w-4 mr-2" />
+                      Enviar por WhatsApp
+                    </button>
+                  </div>
                 </div>
               </div>
 
@@ -404,7 +618,17 @@ export default function OptimizePage() {
                       <div className="flex justify-between text-sm text-gray-500 font-mono">
                         <span className="font-bold text-gray-900">{bar.material}</span>
                         <span>Barra #{index + 1} ({bar.length}mm) {bar.isScrapUsed ? '(Retalho)' : '(Nova)'}</span>
-                        <span>Sobra: {bar.waste}mm</span>
+                        <span>
+                          {bar.reusableScrap > 0 ? (
+                            <span className="text-amber-600 font-semibold mr-2">Sobra: {bar.reusableScrap}mm</span>
+                          ) : null}
+                          {bar.trueWaste > 0 ? (
+                            <span className="text-red-500 font-semibold mr-2">
+                              Sucata: {bar.trueWaste}mm {bar.trueWasteKg > 0 ? `(${bar.trueWasteKg} Kg)` : ''}
+                            </span>
+                          ) : null}
+                          {bar.waste === 0 ? <span className="text-green-600 font-semibold">Sem perda</span> : null}
+                        </span>
                       </div>
                       <div className="h-12 bg-gray-200 rounded-md flex overflow-hidden border border-gray-300 relative">
                         {bar.cuts.map((cut, idx) => (
@@ -420,11 +644,11 @@ export default function OptimizePage() {
                           </div>
                         ))}
                         {/* Waste */}
-                        <div 
-                           style={{ width: `${(bar.waste / bar.length) * 100}%` }}
-                           className="h-full bg-red-100 flex items-center justify-center text-red-800 text-xs font-mono"
+                        <div
+                          style={{ width: `${(bar.waste / bar.length) * 100}%` }}
+                          className="h-full bg-red-100 flex items-center justify-center text-red-800 text-xs font-mono"
                         >
-                           <span className="truncate px-1">{bar.waste}</span>
+                          <span className="truncate px-1">{bar.waste}</span>
                         </div>
                       </div>
                     </div>
@@ -485,7 +709,7 @@ export default function OptimizePage() {
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="flex justify-end space-x-3">
                   <button
                     onClick={() => setStep('review')}
@@ -507,5 +731,13 @@ export default function OptimizePage() {
         </div>
       </main>
     </div>
+  );
+}
+
+export default function OptimizePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-[var(--color-bg)] flex items-center justify-center p-4">Carregando...</div>}>
+      <OptimizeContent />
+    </Suspense>
   );
 }

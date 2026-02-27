@@ -3,7 +3,9 @@ export interface StockItem {
   material: string;
   length: number;
   quantity: number;
+  weightKgM?: number; // Weight in Kg per meter
   isScrap: boolean; // true if it's a scrap piece, false if it's a full bar
+  originProjectId?: string; // ID of the project that generated this scrap
 }
 
 export interface CutRequest {
@@ -11,7 +13,9 @@ export interface CutRequest {
   material: string;
   length: number;
   quantity: number;
+  weightKgM?: number; // Linear weight (Kg/m) for scrap calculation
   description?: string;
+  skipOptimization?: boolean; // If true, this item goes straight to purchase list (e.g., steel plates)
 }
 
 export interface Cut {
@@ -26,6 +30,9 @@ export interface BarResult {
   length: number;
   cuts: Cut[];
   waste: number;
+  trueWaste: number; // The amount of waste that is unrecoverable (sucata) in mm
+  trueWasteKg: number; // The amount of waste that is unrecoverable (sucata) in Kg
+  reusableScrap: number; // The amount of waste that goes back to stock
   isScrapUsed: boolean;
   sourceId?: string; // ID of the stock item used
 }
@@ -39,6 +46,9 @@ export interface PurchaseItem {
 export interface OptimizationResult {
   bars: BarResult[];
   totalWaste: number;
+  totalTrueWaste: number; // Total unrecoverable waste across all bars in mm
+  totalTrueWasteKg: number; // Total unrecoverable waste across all bars in Kg
+  totalReusableScrap: number; // Total scrap returned to stock across all bars
   totalStockUsed: number;
   itemsNotFit: CutRequest[];
   purchaseList: PurchaseItem[]; // Added purchase list

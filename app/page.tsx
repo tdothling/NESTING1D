@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { getProjects, getStock, removeProject } from '@/lib/store';
+import { getProjects, getStock, removeProject, rollbackStock } from '@/lib/store';
 import { Project, StockItem } from '@/lib/types';
 import Link from 'next/link';
 import { Plus, ArrowRight, Package, Scissors, Trash2 } from 'lucide-react';
@@ -24,10 +24,12 @@ export default function Dashboard() {
   const handleDeleteProject = (id: string, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    if (confirm('Tem certeza que deseja excluir este projeto?')) {
+    if (confirm('Tem certeza que deseja excluir este projeto? O estoque consumido será devolvido.')) {
+      rollbackStock(id);
       removeProject(id);
       setProjects(getProjects());
-      toast.success('Projeto excluído com sucesso.');
+      setStock(getStock()); // Atualiza UI de peças ao excluir o projeto
+      toast.success('Projeto excluído e estoque revertido com sucesso.');
     }
   };
 
@@ -37,7 +39,7 @@ export default function Dashboard() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       <Navbar />
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -102,7 +104,7 @@ export default function Dashboard() {
                 Novo Projeto
               </Link>
             </div>
-            
+
             <div className="bg-white shadow overflow-hidden sm:rounded-md border border-[var(--color-line)]">
               <ul className="divide-y divide-gray-200">
                 {projects.length === 0 ? (
