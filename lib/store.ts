@@ -116,19 +116,30 @@ export const updateStockQuantity = async (id: string, newQuantity: number) => {
 export const updateStockFromOptimization = async (result: OptimizationResult, projectId: string) => {
   const stock = await getStock();
 
-  // 1. Consume used stock
+  // 1. Consume used stock (Grouped)
+  const consumedStockUpdates: Record<string, number> = {};
   for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
       const item = stock.find(s => s.id === bar.sourceId);
       if (item && item.quantity > 0) {
-        await updateStockQuantity(item.id, item.quantity - 1);
-        item.quantity -= 1; // local update just in case
+        // Keep tracking the new decremented quantity
+        consumedStockUpdates[item.id] = (consumedStockUpdates[item.id] ?? item.quantity) - 1;
+        item.quantity -= 1; // Update local memory reference
       }
     }
   }
 
-  // 2. Add reusable scraps back to stock
+  // Execute consumed stock updates
+  for (const id of Object.keys(consumedStockUpdates)) {
+    await updateStockQuantity(id, consumedStockUpdates[id]);
+  }
+
+
+  // 2. Add reusable scraps back to stock (Grouped)
   const MIN_SCRAP_LENGTH = 50;
+
+  const existingScrapUpdates: Record<string, number> = {};
+  const newScrapsToAdd: Record<string, { material: string, length: number, quantity: number }> = {};
 
   for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
@@ -140,18 +151,38 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
       );
 
       if (existingScrap) {
-        await updateStockQuantity(existingScrap.id, existingScrap.quantity + 1);
+        existingScrapUpdates[existingScrap.id] = (existingScrapUpdates[existingScrap.id] ?? existingScrap.quantity) + 1;
         existingScrap.quantity += 1;
       } else {
-        await saveStockItem({
-          material: bar.material,
-          length: bar.reusableScrap,
-          quantity: 1,
-          isScrap: true,
-          originProjectId: projectId
-        });
+        const hash = `${bar.material}|${bar.reusableScrap}`;
+        if (!newScrapsToAdd[hash]) {
+          newScrapsToAdd[hash] = {
+            material: bar.material,
+            length: bar.reusableScrap,
+            quantity: 1
+          };
+        } else {
+          newScrapsToAdd[hash].quantity += 1;
+        }
       }
     }
+  }
+
+  // Execute existing scrap increments
+  for (const id of Object.keys(existingScrapUpdates)) {
+    await updateStockQuantity(id, existingScrapUpdates[id]);
+  }
+
+  // Execute grouped new scrap additions (instead of 14 separate DB writes of qty 1)
+  for (const hash of Object.keys(newScrapsToAdd)) {
+    const scrapInfo = newScrapsToAdd[hash];
+    await saveStockItem({
+      material: scrapInfo.material,
+      length: scrapInfo.length,
+      quantity: scrapInfo.quantity,
+      isScrap: true,
+      originProjectId: projectId
+    });
   }
 };
 
