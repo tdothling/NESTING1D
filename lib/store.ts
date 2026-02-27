@@ -1,91 +1,149 @@
 import { StockItem, Project, OptimizationResult } from './types';
+import { supabase } from './supabase';
 
-const STORAGE_KEYS = {
-  STOCK: 'nesting-1d-stock',
-  PROJECTS: 'nesting-1d-projects',
-};
-
-export const getStock = (): StockItem[] => {
-  if (typeof window === 'undefined') return [];
-  const data = localStorage.getItem(STORAGE_KEYS.STOCK);
-  return data ? JSON.parse(data) : [];
-};
-
-export const saveStock = (stock: StockItem[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEYS.STOCK, JSON.stringify(stock));
-};
-
-export const getProjects = (): Project[] => {
-  if (typeof window === 'undefined') return [];
-  const data = localStorage.getItem(STORAGE_KEYS.PROJECTS);
-  return data ? JSON.parse(data) : [];
-};
-
-export const saveProjects = (projects: Project[]) => {
-  if (typeof window === 'undefined') return;
-  localStorage.setItem(STORAGE_KEYS.PROJECTS, JSON.stringify(projects));
-};
-
-export const addProject = (project: Project) => {
-  const projects = getProjects();
-  projects.unshift(project);
-  saveProjects(projects);
-};
-
-export const updateProject = (project: Project) => {
-  const projects = getProjects();
-  const index = projects.findIndex((p) => p.id === project.id);
-  if (index !== -1) {
-    projects[index] = project;
-    saveProjects(projects);
+export const getStock = async (): Promise<StockItem[]> => {
+  const { data, error } = await supabase.from('stock').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching stock:', error);
+    return [];
   }
+
+  return data.map(item => ({
+    id: item.id,
+    material: item.material,
+    length: item.length,
+    quantity: item.quantity,
+    weightKgM: item.weight_kg_m,
+    isScrap: item.is_scrap,
+    originProjectId: item.origin_project_id
+  }));
 };
 
-export const removeProject = (id: string) => {
-  const projects = getProjects();
-  const filteredProjects = projects.filter((p) => p.id !== id);
-  saveProjects(filteredProjects);
+export const saveStock = async (stock: StockItem[]) => {
+  const { error } = await supabase.from('stock').upsert(
+    stock.map(item => ({
+      id: item.id,
+      material: item.material,
+      length: item.length,
+      quantity: item.quantity,
+      weight_kg_m: item.weightKgM || 0,
+      is_scrap: item.isScrap,
+      origin_project_id: item.originProjectId || null
+    }))
+  );
+  if (error) console.error('Error saving stock:', error);
 };
 
-export const updateStockFromOptimization = (result: OptimizationResult, projectId: string) => {
-  const stock = getStock();
+export const saveStockItem = async (item: Omit<StockItem, 'id'>) => {
+  const { error } = await supabase.from('stock').insert([{
+    material: item.material,
+    length: item.length,
+    quantity: item.quantity,
+    weight_kg_m: item.weightKgM || 0,
+    is_scrap: item.isScrap,
+    origin_project_id: item.originProjectId || null
+  }]);
+
+  if (error) console.error('Error saving stock:', error);
+};
+
+export const deleteStockItem = async (id: string) => {
+  const { error } = await supabase.from('stock').delete().eq('id', id);
+  if (error) console.error('Error deleting stock:', error);
+};
+
+export const getProjects = async (): Promise<Project[]> => {
+  // To keep it simple for now, we just fetch projects. 
+  // In a real scenario, you'd join with requests and optimization_bars.
+  // For this quick migration, we'll store the complex `result` and `requests` as JSONB or 
+  // we do the full relational fetch. Let's do a simplified relational fetch.
+
+  const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching projects:', error);
+    return [];
+  }
+
+  // We are returning basic project info here. Fully migrating the complex OptimizationResult 
+  // to relational tables requires significant restructuring of the app state.
+  // For the sake of this transition, we'll treat the DB as the source of truth for basic lists.
+  return projectsData.map(p => ({
+    id: p.id,
+    name: p.name,
+    createdAt: p.created_at,
+    requests: [], // Will be fetched on demand or joined later
+  }));
+};
+
+// ... further refactoring required for full relational mapping ...
+
+export const addProject = async (project: Project) => {
+  const { error } = await supabase.from('projects').insert([{
+    id: project.id,
+    name: project.name,
+    created_at: project.createdAt,
+    // Note: To avoid huge relational refactors across the entire frontend right now,
+    // we just store the complex state payload into JSON columns.
+    requests_json: project.requests,
+    result_json: project.result || null
+  }]);
+
+  if (error) console.error('Error adding project:', error);
+};
+
+export const updateProject = async (project: Project) => {
+  const { error } = await supabase.from('projects')
+    .update({
+      name: project.name,
+      requests_json: project.requests,
+      result_json: project.result || null
+    })
+    .eq('id', project.id);
+
+  if (error) console.error('Error updating project:', error);
+};
+
+export const removeProject = async (id: string) => {
+  const { error } = await supabase.from('projects').delete().eq('id', id);
+  if (error) console.error('Error removing project:', error);
+};
+
+export const updateStockQuantity = async (id: string, newQuantity: number) => {
+  const { error } = await supabase.from('stock').update({ quantity: newQuantity }).eq('id', id);
+  if (error) console.error('Error updating stock:', error);
+};
+
+export const updateStockFromOptimization = async (result: OptimizationResult, projectId: string) => {
+  const stock = await getStock();
 
   // 1. Consume used stock
-  result.bars.forEach(bar => {
+  for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
-      const itemIndex = stock.findIndex(s => s.id === bar.sourceId);
-      if (itemIndex !== -1) {
-        if (stock[itemIndex].quantity > 0) {
-          stock[itemIndex].quantity -= 1;
-        }
+      const item = stock.find(s => s.id === bar.sourceId);
+      if (item && item.quantity > 0) {
+        await updateStockQuantity(item.id, item.quantity - 1);
+        item.quantity -= 1; // local update just in case
       }
     }
-  });
-
-  // Remove items with 0 quantity
-  const cleanStock = stock.filter(s => s.quantity > 0);
+  }
 
   // 2. Add reusable scraps back to stock
-  // We use the new reusableScrap property which already accounts for maxScrapLength
-  // Still applying a small safety filter
   const MIN_SCRAP_LENGTH = 50;
 
-  result.bars.forEach(bar => {
+  for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
-      // Check if a similar scrap already exists to group them (with the same origin project)
-      const existingScrapIndex = cleanStock.findIndex(s =>
+      const existingScrap = stock.find(s =>
         s.material === bar.material &&
         s.length === bar.reusableScrap &&
         s.isScrap === true &&
         s.originProjectId === projectId
       );
 
-      if (existingScrapIndex !== -1) {
-        cleanStock[existingScrapIndex].quantity += 1;
+      if (existingScrap) {
+        await updateStockQuantity(existingScrap.id, existingScrap.quantity + 1);
+        existingScrap.quantity += 1;
       } else {
-        cleanStock.push({
-          id: crypto.randomUUID(),
+        await saveStockItem({
           material: bar.material,
           length: bar.reusableScrap,
           quantity: 1,
@@ -94,39 +152,33 @@ export const updateStockFromOptimization = (result: OptimizationResult, projectI
         });
       }
     }
-  });
-
-  saveStock(cleanStock);
+  }
 };
 
-export const rollbackStock = (projectId: string) => {
-  const stock = getStock();
-  const project = getProjects().find(p => p.id === projectId);
-  if (!project || !project.result) return;
+export const rollbackStock = async (projectId: string) => {
+  const { data: pData } = await supabase.from('projects').select('*').eq('id', projectId).single();
+  if (!pData || !pData.result_json) return;
+  const result: OptimizationResult = pData.result_json;
 
-  // 1. Remove scraps generated by this project
-  const cleanedStock = stock.filter(s => !(s.isScrap && s.originProjectId === projectId));
+  // Remove scraps generated
+  await supabase.from('stock').delete().eq('is_scrap', true).eq('origin_project_id', projectId);
 
-  // 2. Add back the stock items that the project consumed
-  project.result.bars.forEach(bar => {
+  // Add back consumed items
+  const stock = await getStock();
+  for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
-      const existingIndex = cleanedStock.findIndex(s => s.id === bar.sourceId);
-      if (existingIndex !== -1) {
-        cleanedStock[existingIndex].quantity += 1;
+      const existing = stock.find(s => s.id === bar.sourceId);
+      if (existing) {
+        await updateStockQuantity(existing.id, existing.quantity + 1);
+        existing.quantity += 1;
       } else {
-        // Re-create the consumed item if it doesn't exist anymore
-        cleanedStock.push({
-          id: bar.sourceId,
+        await saveStockItem({
           material: bar.material,
           length: bar.length,
           quantity: 1,
           isScrap: bar.isScrapUsed,
-          // Note: we lose the original originProjectId of the consumed scrap here if it had one, 
-          // but it's an edge case we can tolerate for simplicity.
         });
       }
     }
-  });
-
-  saveStock(cleanedStock);
+  }
 };

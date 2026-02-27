@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { getStock, saveStock } from '@/lib/store';
+import { getStock, saveStock, deleteStockItem } from '@/lib/store';
 import { StockItem } from '@/lib/types';
 import { Plus, Trash2, Save } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,17 +12,23 @@ export default function InventoryPage() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Wrap in setTimeout to avoid synchronous state update warning
-    const timer = setTimeout(() => {
-      setStock(getStock());
-      setLoading(false);
-    }, 0);
-    return () => clearTimeout(timer);
+    const loadStock = async () => {
+      setLoading(true);
+      try {
+        const data = await getStock();
+        setStock(data);
+      } catch (error) {
+        console.error(error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    loadStock();
   }, []);
 
-  const handleSave = () => {
-    saveStock(stock);
-    toast.success('Estoque salvo com sucesso!');
+  const handleSave = async () => {
+    await saveStock(stock);
+    toast.success('Estoque salvo e sincronizado na nuvem!');
   };
 
   const addItem = () => {
@@ -36,8 +42,10 @@ export default function InventoryPage() {
     setStock([...stock, newItem]);
   };
 
-  const removeItem = (id: string) => {
+  const removeItem = async (id: string) => {
+    await deleteStockItem(id);
     setStock(stock.filter((item) => item.id !== id));
+    toast.success('Item removido com sucesso!');
   };
 
   const updateItem = (id: string, field: keyof StockItem, value: any) => {
@@ -53,7 +61,7 @@ export default function InventoryPage() {
   return (
     <div className="min-h-screen bg-[var(--color-bg)]">
       <Navbar />
-      
+
       <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
         <div className="px-4 py-6 sm:px-0">
           <div className="flex justify-between items-center mb-6">
@@ -86,7 +94,7 @@ export default function InventoryPage() {
               <div className="col-span-2">Tipo</div>
               <div className="col-span-2 text-right">Ações</div>
             </div>
-            
+
             <div className="divide-y divide-gray-200">
               {stock.length === 0 ? (
                 <div className="p-8 text-center text-gray-500">
