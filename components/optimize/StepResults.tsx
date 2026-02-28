@@ -1,13 +1,15 @@
 import React from 'react';
-import { OptimizationResult } from '@/lib/types';
-import { AlertCircle, ShoppingCart, Download, MessageCircle, Save } from 'lucide-react';
+import { OptimizationResult, StockItem } from '@/lib/types';
+import { AlertCircle, ShoppingCart, Download, MessageCircle, Save, Printer, DollarSign } from 'lucide-react';
 
 interface StepResultsProps {
     result: OptimizationResult;
     projectName: string;
+    projectId: string | null;
     setProjectName: (name: string) => void;
     autoUpdateStock: boolean;
     setAutoUpdateStock: (b: boolean) => void;
+    stock: StockItem[];
     onBack: () => void;
     onSave: () => void;
     onDownloadPDF: () => void;
@@ -18,23 +20,38 @@ interface StepResultsProps {
 export function StepResults({
     result,
     projectName,
+    projectId,
     setProjectName,
     autoUpdateStock,
     setAutoUpdateStock,
+    stock,
     onBack,
     onSave,
     onDownloadPDF,
     onWhatsApp,
     loading
 }: StepResultsProps) {
+
+    // Calculate estimated cost from purchase list
+    const estimatedCost = result.purchaseList
+        ? result.purchaseList.reduce((total, item) => {
+            // Find the price per meter for this material from stock
+            const stockItem = stock.find(s => s.material.trim().toLowerCase() === item.material.trim().toLowerCase() && s.pricePerMeter && s.pricePerMeter > 0);
+            if (stockItem && stockItem.pricePerMeter) {
+                return total + (item.length / 1000) * stockItem.pricePerMeter * item.quantity;
+            }
+            return total;
+        }, 0)
+        : 0;
+
     return (
         <div className="space-y-6">
             {/* Summary */}
             <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
                 <h2 className="text-lg font-medium text-gray-900 font-mono mb-4">Resumo da Otimização</h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-4">
+                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
                     <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total de Barras Usadas</dt>
+                        <dt className="text-sm font-medium text-gray-500 truncate">Total de Barras</dt>
                         <dd className="mt-1 text-3xl font-semibold text-gray-900">{result.totalStockUsed}</dd>
                     </div>
                     <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
@@ -58,6 +75,17 @@ export function StepResults({
                             {Math.round((1 - (result.totalTrueWaste / (result.bars.reduce((acc, b) => acc + b.length, 0) || 1))) * 100)}%
                         </dd>
                     </div>
+                    {estimatedCost > 0 && (
+                        <div className="bg-green-50 overflow-hidden rounded-lg p-4 border border-green-200">
+                            <dt className="text-sm font-medium text-green-700 truncate flex items-center">
+                                <DollarSign className="h-4 w-4 mr-1" /> Custo Estimado
+                            </dt>
+                            <dd className="mt-1 text-2xl font-semibold text-green-700">
+                                R$ {estimatedCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </dd>
+                            <span className="text-xs text-green-600">Somente barras novas</span>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -108,6 +136,15 @@ export function StepResults({
                             <MessageCircle className="h-4 w-4 mr-2" />
                             Enviar por WhatsApp
                         </button>
+                        {projectId && (
+                            <button
+                                onClick={() => window.open(`/print/${projectId}`, '_blank')}
+                                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                            >
+                                <Printer className="h-4 w-4 mr-2" />
+                                Ficha de Corte
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>

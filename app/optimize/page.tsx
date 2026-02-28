@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { extractTableData } from '@/lib/gemini';
+import { parseSpreadsheet } from '@/lib/spreadsheet';
 import { getStock, addProject, updateProject, updateStockFromOptimization, getProjects, rollbackStock } from '@/lib/store';
 import { CutRequest, StockItem, OptimizationResult, Project } from '@/lib/types';
 import { toast } from 'sonner';
@@ -85,6 +86,21 @@ function OptimizeContent() {
     } catch (error) {
       console.error(error);
       toast.error('Erro ao extrair dados. Tente novamente.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSpreadsheet = async (file: File) => {
+    setLoading(true);
+    try {
+      const data = await parseSpreadsheet(file);
+      setRequests(data);
+      setStep('review');
+      toast.success(`${data.length} itens importados da planilha!`);
+    } catch (error: any) {
+      console.error(error);
+      toast.error(error.message || 'Erro ao ler a planilha.');
     } finally {
       setLoading(false);
     }
@@ -309,6 +325,7 @@ function OptimizeContent() {
           {step === 'upload' && (
             <StepUploader
               onDrop={handleDrop}
+              onSpreadsheet={handleSpreadsheet}
               loading={loading}
               onManualEntry={() => {
                 setRequests([]);
@@ -341,9 +358,11 @@ function OptimizeContent() {
             <StepResults
               result={result}
               projectName={projectName}
+              projectId={projectId}
               setProjectName={setProjectName}
               autoUpdateStock={autoUpdateStock}
               setAutoUpdateStock={setAutoUpdateStock}
+              stock={stock}
               onBack={() => setStep('review')}
               onSave={handleSaveProject}
               onDownloadPDF={handleDownloadPDF}
