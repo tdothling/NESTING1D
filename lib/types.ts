@@ -1,3 +1,5 @@
+import type { ProfileCategory, ProfileDimensions } from './steel-catalog';
+
 export interface StockItem {
   id: string;
   material: string;
@@ -12,9 +14,11 @@ export interface StockItem {
 export interface CutRequest {
   id: string;
   material: string;
+  profileType?: ProfileCategory;       // Steel profile type (ue, u_simples, z, etc.)
+  profileDimensions?: ProfileDimensions; // Dimensions for weight calculation
   length: number;
   quantity: number;
-  weightKgM?: number; // Linear weight (Kg/m) for scrap calculation
+  weightKgM?: number; // Linear weight (Kg/m) — auto-calculated or manual
   description?: string;
   skipOptimization?: boolean; // If true, this item goes straight to purchase list (e.g., steel plates)
 }

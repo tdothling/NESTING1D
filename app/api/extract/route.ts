@@ -25,9 +25,27 @@ export async function POST(req: Request) {
        - SPECIAL CASE FOR PLATES (Chapas de ligação): If the material is "ACO" or similar and the nomenclature is like "# 6.30x1000" (or "# Thickness x Width") with a given length (e.g. 788), format the material strictly as: "Chapa {Width}x{Length} e={Thickness}mm" (e.g., "Chapa 1000x788 e=6.30mm"). In this case, set skipOptimization to true.
     - Length (convert to millimeters. If in cm, multiply by 10. If in m, multiply by 1000). For plates formatted above, length is STILL REQUIRED here as the original length.
     - Quantity (number of pieces).
-    - Linear Weight (if present in the table as kg/m, peso linear, etc. Return as a number).
     - Description (Only use this for generic observations, assembly positions, or codes like "Pos. 1", "Montante". Do NOT put dimensions here).
     - skipOptimization (Boolean. Set to true ONLY for Plates/Chapas that are bought pre-cut, as they don't need 1D bar nesting. Otherwise false).
+    
+    IMPORTANT - Profile Type and Dimensions:
+    You MUST also extract the profile type and its geometric dimensions. Use these exact type codes:
+    - "ue" = U Enrijecido (has height, width, lipHeight, thickness)
+    - "u_simples" = U Simples / U dobrado sem enrijecedor (has height, width, thickness)
+    - "cartola" = Perfil Cartola (has height, width, lipHeight, thickness)
+    - "z" = Perfil Z (has height, width, thickness)
+    - "cantoneira" = Cantoneira de abas iguais (has width, thickness)
+    - "barra_chata" = Barra Chata (has width, thickness)
+    - "barra_redonda" = Barra Redonda (has diameter)
+    - "chapa" = Chapa de Aço (has thickness, width)
+    - "w_hp" = Perfil W or HP laminado (has height, width, thickness, flangeThickness)
+    
+    Parse the dimensions from the material name. For example:
+    - "Ue 200x75x25x3.00" → profileType:"ue", profileHeight:200, profileWidth:75, profileLipHeight:25, profileThickness:3.00
+    - "L 2x3/16" → profileType:"cantoneira", profileWidth:50.8 (2" in mm), profileThickness:4.76 (3/16" in mm)
+    - "BR Ø1" → profileType:"barra_redonda", profileDiameter:25.4
+
+    All dimensions MUST be in millimeters. Convert inches to mm (1" = 25.4mm).
     
     Return a JSON array ONLY.
   `;
@@ -57,9 +75,15 @@ export async function POST(req: Request) {
                             material: { type: Type.STRING },
                             length: { type: Type.NUMBER, description: "Length in mm" },
                             quantity: { type: Type.NUMBER },
-                            weightKgM: { type: Type.NUMBER, description: "Linear weight in kg/m" },
                             description: { type: Type.STRING },
                             skipOptimization: { type: Type.BOOLEAN, description: "True if it's a plate (Chapa) and shouldn't be nested" },
+                            profileType: { type: Type.STRING, description: "Profile type code: ue, u_simples, cartola, z, cantoneira, barra_chata, barra_redonda, chapa, w_hp" },
+                            profileHeight: { type: Type.NUMBER, description: "Web height in mm" },
+                            profileWidth: { type: Type.NUMBER, description: "Flange/leg width in mm" },
+                            profileThickness: { type: Type.NUMBER, description: "Wall/plate thickness in mm" },
+                            profileLipHeight: { type: Type.NUMBER, description: "Stiffener lip height in mm (Ue, Cartola)" },
+                            profileFlangeThickness: { type: Type.NUMBER, description: "Flange thickness in mm (W/HP only)" },
+                            profileDiameter: { type: Type.NUMBER, description: "Diameter in mm (round bar)" },
                         },
                         required: ["material", "length", "quantity"],
                     },

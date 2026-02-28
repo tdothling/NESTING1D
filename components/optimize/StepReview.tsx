@@ -1,6 +1,13 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { CutRequest } from '@/lib/types';
-import { Plus, Trash2, ArrowRight, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, ArrowRight, RefreshCw, ChevronDown, ChevronUp, Calculator } from 'lucide-react';
+import {
+    PROFILE_LABELS,
+    REQUIRED_DIMENSIONS,
+    DIMENSION_LABELS,
+    calculateWeightKgM,
+} from '@/lib/steel-catalog';
+import type { ProfileCategory, ProfileDimensions } from '@/lib/steel-catalog';
 
 interface StepReviewProps {
     requests: CutRequest[];
@@ -18,6 +25,128 @@ interface StepReviewProps {
     onBack: () => void;
     onOptimize: () => void;
     loading: boolean;
+}
+
+const PROFILE_TYPES = Object.keys(PROFILE_LABELS) as ProfileCategory[];
+
+/** Sub-component: Expandable Profile Dimension Editor */
+function ProfileDimensionEditor({
+    req,
+    updateRequest,
+}: {
+    req: CutRequest;
+    updateRequest: (id: string, field: keyof CutRequest, value: any) => void;
+}) {
+    const [expanded, setExpanded] = React.useState(!!req.profileType);
+
+    const handleTypeChange = useCallback((newType: string) => {
+        const profileType = newType === '' ? undefined : (newType as ProfileCategory);
+        updateRequest(req.id, 'profileType', profileType);
+
+        // Reset dimensions when type changes
+        updateRequest(req.id, 'profileDimensions', undefined);
+        updateRequest(req.id, 'weightKgM', 0);
+
+        if (profileType) {
+            setExpanded(true);
+        }
+    }, [req.id, updateRequest]);
+
+    const handleDimensionChange = useCallback((dimKey: keyof ProfileDimensions, value: number) => {
+        const newDims = { ...(req.profileDimensions || {}), [dimKey]: value || undefined };
+        updateRequest(req.id, 'profileDimensions', newDims);
+
+        // Try to recalculate weight
+        if (req.profileType) {
+            try {
+                const weight = calculateWeightKgM(req.profileType, newDims);
+                updateRequest(req.id, 'weightKgM', weight);
+            } catch {
+                // Incomplete dimensions — don't update weight
+            }
+        }
+    }, [req.id, req.profileType, req.profileDimensions, updateRequest]);
+
+    const recalcWeight = useCallback(() => {
+        if (req.profileType && req.profileDimensions) {
+            try {
+                const weight = calculateWeightKgM(req.profileType, req.profileDimensions);
+                updateRequest(req.id, 'weightKgM', weight);
+            } catch {
+                // incomplete
+            }
+        }
+    }, [req.id, req.profileType, req.profileDimensions, updateRequest]);
+
+    const requiredDims = req.profileType ? REQUIRED_DIMENSIONS[req.profileType] : [];
+
+    return (
+        <div className="space-y-2">
+            {/* Toggle + Type selector row */}
+            <div className="flex items-center gap-2">
+                <button
+                    onClick={() => setExpanded(!expanded)}
+                    className="text-gray-400 hover:text-gray-600 p-0.5"
+                    title={expanded ? 'Recolher dimensões' : 'Expandir dimensões'}
+                >
+                    {expanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+
+                <select
+                    value={req.profileType || ''}
+                    onChange={(e) => handleTypeChange(e.target.value)}
+                    className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 text-xs py-1"
+                >
+                    <option value="">Selecionar tipo...</option>
+                    {PROFILE_TYPES.map(type => (
+                        <option key={type} value={type}>{PROFILE_LABELS[type]}</option>
+                    ))}
+                </select>
+            </div>
+
+            {/* Dimension inputs — only shown when expanded and type is selected */}
+            {expanded && req.profileType && (
+                <div className="bg-gray-50 rounded-md p-2 border border-gray-200 space-y-1.5">
+                    <div className="grid grid-cols-2 gap-1.5">
+                        {requiredDims.map(dimKey => (
+                            <div key={dimKey}>
+                                <label className="block text-[10px] text-gray-500 leading-tight mb-0.5">
+                                    {DIMENSION_LABELS[dimKey]}
+                                </label>
+                                <input
+                                    type="number"
+                                    step="0.01"
+                                    value={req.profileDimensions?.[dimKey] || ''}
+                                    placeholder="0"
+                                    onChange={(e) => handleDimensionChange(dimKey, Number(e.target.value))}
+                                    className="block w-full border-gray-300 rounded text-xs py-1 px-1.5 focus:ring-indigo-500 focus:border-indigo-500"
+                                />
+                            </div>
+                        ))}
+                    </div>
+
+                    {/* Calculated weight display */}
+                    {req.weightKgM && req.weightKgM > 0 ? (
+                        <div className="flex items-center justify-between pt-1 border-t border-gray-200">
+                            <span className="text-[10px] text-gray-500">Peso calculado:</span>
+                            <span className="text-xs font-medium text-green-700 font-mono">{req.weightKgM} kg/m</span>
+                        </div>
+                    ) : (
+                        <div className="flex items-center gap-1 pt-1 border-t border-gray-200">
+                            <span className="text-[10px] text-amber-600">Preencha as dimensões para calcular</span>
+                            <button
+                                onClick={recalcWeight}
+                                className="text-indigo-500 hover:text-indigo-700"
+                                title="Recalcular peso"
+                            >
+                                <Calculator className="h-3 w-3" />
+                            </button>
+                        </div>
+                    )}
+                </div>
+            )}
+        </div>
+    );
 }
 
 export function StepReview({
@@ -84,21 +213,22 @@ export function StepReview({
                     <table className="min-w-full divide-y divide-gray-200">
                         <thead className="bg-gray-50">
                             <tr>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Material</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Comprimento (mm)</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Qtd</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Peso (Kg/m)</th>
-                                <th scope="col" className="px-6 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-mono" title="Pular Otimização de Barra (ex: Chapas já cortadas)">Direto p/ Compra</th>
-                                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Descrição</th>
-                                <th scope="col" className="relative px-6 py-3">
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Material</th>
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono" style={{ minWidth: 180 }}>Perfil / Dimensões</th>
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Comp. (mm)</th>
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Qtd</th>
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Peso (Kg/m)</th>
+                                <th scope="col" className="px-4 py-3 text-center text-xs font-medium text-gray-500 uppercase tracking-wider font-mono" title="Pular Otimização de Barra (ex: Chapas já cortadas)">Direto p/ Compra</th>
+                                <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Descrição</th>
+                                <th scope="col" className="relative px-4 py-3">
                                     <span className="sr-only">Ações</span>
                                 </th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-200">
                             {requests.map((req) => (
-                                <tr key={req.id}>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                <tr key={req.id} className="align-top">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <input
                                             type="text"
                                             value={req.material}
@@ -106,7 +236,13 @@ export function StepReview({
                                             className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-4 py-3">
+                                        <ProfileDimensionEditor
+                                            req={req}
+                                            updateRequest={updateRequest}
+                                        />
+                                    </td>
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <input
                                             type="number"
                                             value={req.length}
@@ -114,7 +250,7 @@ export function StepReview({
                                             className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <input
                                             type="number"
                                             value={req.quantity}
@@ -122,17 +258,17 @@ export function StepReview({
                                             className="block w-20 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <input
                                             type="number"
                                             step="0.01"
                                             value={req.weightKgM || ''}
-                                            placeholder="Opcional"
+                                            placeholder="Auto"
                                             onChange={(e) => updateRequest(req.id, 'weightKgM', Number(e.target.value))}
-                                            className="block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                                            className={`block w-24 border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm ${req.weightKgM && req.weightKgM > 0 ? 'bg-green-50 border-green-300' : ''}`}
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-center">
+                                    <td className="px-4 py-3 whitespace-nowrap text-center">
                                         <input
                                             type="checkbox"
                                             checked={req.skipOptimization || false}
@@ -140,7 +276,7 @@ export function StepReview({
                                             className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap">
+                                    <td className="px-4 py-3 whitespace-nowrap">
                                         <input
                                             type="text"
                                             value={req.description || ''}
@@ -148,7 +284,7 @@ export function StepReview({
                                             className="block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                                         />
                                     </td>
-                                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                    <td className="px-4 py-3 whitespace-nowrap text-right text-sm font-medium">
                                         <button onClick={() => removeRequest(req.id)} className="text-red-600 hover:text-red-900">
                                             <Trash2 className="h-4 w-4" />
                                         </button>
