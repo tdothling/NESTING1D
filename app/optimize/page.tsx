@@ -222,7 +222,7 @@ function OptimizeContent() {
   };
 
   const updateRequest = (id: string, field: keyof CutRequest, value: any) => {
-    setRequests(requests.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setRequests(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
   };
 
   const removeRequest = (id: string) => {
