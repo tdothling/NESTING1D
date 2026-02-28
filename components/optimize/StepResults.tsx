@@ -129,22 +129,32 @@ export function StepResults({
                             <Download className="h-4 w-4 mr-2" />
                             Baixar PDF
                         </button>
-                        <button
-                            onClick={onWhatsApp}
-                            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#25D366] hover:bg-[#128C7E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#25D366]"
-                        >
-                            <MessageCircle className="h-4 w-4 mr-2" />
-                            Enviar por WhatsApp
-                        </button>
                         {projectId && (
                             <button
-                                onClick={() => window.open(`/print/${projectId}`, '_blank')}
-                                className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                                onClick={onWhatsApp}
+                                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#25D366] hover:bg-[#128C7E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#25D366]"
                             >
-                                <Printer className="h-4 w-4 mr-2" />
-                                Ficha de Corte
+                                <MessageCircle className="h-4 w-4 mr-2" />
+                                Enviar por WhatsApp
                             </button>
                         )}
+                        <button
+                            onClick={() => {
+                                // Store current in-memory result in sessionStorage so the print page 
+                                // always shows the LATEST optimization, not stale DB data
+                                const printData = {
+                                    name: projectName || 'Projeto',
+                                    createdAt: new Date().toISOString(),
+                                    result: result,
+                                };
+                                sessionStorage.setItem('nesting1d_print_data', JSON.stringify(printData));
+                                window.open('/print/live', '_blank');
+                            }}
+                            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                        >
+                            <Printer className="h-4 w-4 mr-2" />
+                            Ficha de Corte
+                        </button>
                     </div>
                 </div>
             </div>
