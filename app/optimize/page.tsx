@@ -42,6 +42,11 @@ function OptimizeContent() {
           if (loadedProject) {
             setProjectName(loadedProject.name);
             setRequests(loadedProject.requests);
+            // Restore saved optimization settings
+            if (loadedProject.settings) {
+              setStandardBarLengths(loadedProject.settings.standardBarLengths);
+              setMaxScrapLength(loadedProject.settings.maxScrapLength);
+            }
             if (loadedProject.result) {
               setResult(loadedProject.result);
               setStep('results');
@@ -188,7 +193,11 @@ function OptimizeContent() {
         name: projectName || `Projeto ${new Date().toLocaleDateString()}`,
         createdAt: new Date().toISOString(),
         requests,
-        result
+        result,
+        settings: {
+          standardBarLengths,
+          maxScrapLength
+        }
       };
 
       if (projectId) {

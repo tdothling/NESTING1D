@@ -67,6 +67,7 @@ export const getProjects = async (): Promise<Project[]> => {
     createdAt: p.created_at,
     requests: p.requests_json || [],
     result: p.result_json || undefined,
+    settings: p.settings_json || undefined,
   }));
 };
 
@@ -77,10 +78,9 @@ export const addProject = async (project: Project) => {
     id: project.id,
     name: project.name,
     created_at: project.createdAt,
-    // Note: To avoid huge relational refactors across the entire frontend right now,
-    // we just store the complex state payload into JSON columns.
     requests_json: project.requests,
-    result_json: project.result || null
+    result_json: project.result || null,
+    settings_json: project.settings || null
   }]);
 
   if (error) console.error('Error adding project:', error);
@@ -91,7 +91,8 @@ export const updateProject = async (project: Project) => {
     .update({
       name: project.name,
       requests_json: project.requests,
-      result_json: project.result || null
+      result_json: project.result || null,
+      settings_json: project.settings || null
     })
     .eq('id', project.id);
 

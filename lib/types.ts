@@ -55,10 +55,16 @@ export interface OptimizationResult {
   purchaseList: PurchaseItem[]; // Added purchase list
 }
 
+export interface ProjectSettings {
+  standardBarLengths: Record<string, number>;
+  maxScrapLength: number;
+}
+
 export interface Project {
   id: string;
   name: string;
   createdAt: string;
   requests: CutRequest[];
   result?: OptimizationResult;
+  settings?: ProjectSettings;
 }
