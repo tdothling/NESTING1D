@@ -151,50 +151,86 @@ export function StepResults({
 
             {/* Cut Plan Visualization */}
             <div className="bg-white shadow rounded-lg border border-[var(--color-line)] overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-[var(--color-line)]">
+                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-[var(--color-line)] flex items-center justify-between">
                     <h3 className="text-lg leading-6 font-medium text-gray-900 font-mono">Plano de Corte Detalhado</h3>
+                    <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded border border-indigo-200">
+                        Vista Agrupada
+                    </span>
                 </div>
                 <div className="p-6 space-y-8">
-                    {result.bars.map((bar, index) => (
-                        <div key={bar.id} className="space-y-2">
-                            <div className="flex justify-between text-sm text-gray-500 font-mono">
-                                <span className="font-bold text-gray-900">{bar.material}</span>
-                                <span>Barra #{index + 1} ({bar.length}mm) {bar.isScrapUsed ? '(Retalho)' : '(Nova)'}</span>
-                                <span>
-                                    {bar.reusableScrap > 0 ? (
-                                        <span className="text-amber-600 font-semibold mr-2">Sobra: {bar.reusableScrap}mm</span>
-                                    ) : null}
-                                    {bar.trueWaste > 0 ? (
-                                        <span className="text-red-500 font-semibold mr-2">
-                                            Sucata: {bar.trueWaste}mm {bar.trueWasteKg > 0 ? `(${bar.trueWasteKg} Kg)` : ''}
-                                        </span>
-                                    ) : null}
-                                    {bar.waste === 0 ? <span className="text-green-600 font-semibold">Sem perda</span> : null}
-                                </span>
-                            </div>
-                            <div className="h-12 bg-gray-200 rounded-md flex overflow-hidden border border-gray-300 relative">
-                                {bar.cuts.map((cut, idx) => (
-                                    <div
-                                        key={idx}
-                                        style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                        className="h-full bg-[var(--color-ink)] border-r border-white flex items-center justify-center text-white text-xs font-mono relative group"
-                                    >
-                                        <span className="truncate px-1">{cut.length}</span>
-                                        <div className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs p-1 rounded whitespace-nowrap z-10">
-                                            {cut.description || `Peça ${idx + 1}`} - {cut.length}mm
-                                        </div>
+                    {(() => {
+                        // Group identical bars
+                        const groupedBars = result.bars.reduce((acc, bar) => {
+                            const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.cuts.map(c => c.length).join(',')}`;
+                            if (!acc[signature]) {
+                                acc[signature] = { ...bar, groupQuantity: 1, originalIndices: [] };
+                            } else {
+                                acc[signature].groupQuantity++;
+                            }
+                            return acc;
+                        }, {} as Record<string, typeof result.bars[0] & { groupQuantity: number, originalIndices: number[] }>);
+
+                        return Object.values(groupedBars).map((bar, index) => (
+                            <div key={bar.id} className="space-y-2 relative">
+                                <div className="flex justify-between items-center text-sm text-gray-500 font-mono">
+                                    <div className="flex items-center gap-3">
+                                        {bar.groupQuantity > 1 && (
+                                            <span className="flex items-center justify-center bg-[var(--color-accent)] text-white font-bold px-2 py-1 rounded text-xs shadow-sm">
+                                                Qtd: {bar.groupQuantity}x
+                                            </span>
+                                        )}
+                                        <span className="font-bold text-gray-900 text-base">{bar.material}</span>
+                                        <span>Barra de {bar.length}mm {bar.isScrapUsed ? '(Retalho)' : '(Nova)'}</span>
                                     </div>
-                                ))}
-                                {/* Waste */}
-                                <div
-                                    style={{ width: `${(bar.waste / bar.length) * 100}%` }}
-                                    className="h-full bg-red-100 flex items-center justify-center text-red-800 text-xs font-mono"
-                                >
-                                    <span className="truncate px-1">{bar.waste}</span>
+
+                                    <span>
+                                        {bar.reusableScrap > 0 ? (
+                                            <span className="text-amber-600 font-semibold mr-3">Sobra: {bar.reusableScrap}mm</span>
+                                        ) : null}
+                                        {bar.trueWaste > 0 ? (
+                                            <span className="text-red-500 font-semibold mr-3">
+                                                Sucata: {bar.trueWaste}mm {bar.trueWasteKg > 0 ? `(${bar.trueWasteKg} Kg)` : ''}
+                                            </span>
+                                        ) : null}
+                                        {bar.waste === 0 ? <span className="text-green-600 font-semibold">Sem perda</span> : null}
+                                    </span>
                                 </div>
+
+                                <div className={`h-12 bg-gray-200 rounded-md flex overflow-hidden border ${bar.groupQuantity > 1 ? 'border-orange-300 shadow-sm ring-2 ring-orange-50' : 'border-gray-300'} relative`}>
+                                    {bar.cuts.map((cut, idx) => (
+                                        <div
+                                            key={idx}
+                                            style={{ width: `${(cut.length / bar.length) * 100}%` }}
+                                            className="h-full bg-[var(--color-ink)] border-r border-white flex items-center justify-center text-white text-xs font-mono relative group transition-colors hover:bg-gray-800"
+                                        >
+                                            <span className="truncate px-1 font-bold">{cut.length}</span>
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs p-1.5 rounded whitespace-nowrap z-10 shadow-lg border border-gray-700">
+                                                {cut.description || `Peça ${idx + 1}`} - {cut.length}mm
+                                                {bar.groupQuantity > 1 && <span className="block mt-1 pt-1 border-t border-gray-600 text-gray-300">Total a cortar: {bar.groupQuantity} peças iguais</span>}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    {/* Waste */}
+                                    <div
+                                        style={{ width: `${(bar.waste / bar.length) * 100}%` }}
+                                        className="h-full bg-red-100 flex items-center justify-center text-red-800 text-xs font-mono border-l-2 border-red-200"
+                                    >
+                                        <span className="truncate px-1">{bar.waste}</span>
+                                    </div>
+                                </div>
+
+                                {/* Visual stacked effect for grouped bars */}
+                                {bar.groupQuantity > 1 && (
+                                    <>
+                                        <div className="absolute top-10 left-1 right-1 h-12 bg-[var(--color-ink)] opacity-10 rounded-b-md -z-10 border border-gray-300"></div>
+                                        {bar.groupQuantity > 2 && (
+                                            <div className="absolute top-11 left-2 right-2 h-12 bg-[var(--color-ink)] opacity-5 rounded-b-md -z-20 border border-gray-200"></div>
+                                        )}
+                                    </>
+                                )}
                             </div>
-                        </div>
-                    ))}
+                        ));
+                    })()}
                 </div>
             </div>
 

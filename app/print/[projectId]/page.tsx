@@ -91,80 +91,102 @@ export default function PrintPage() {
                 </div>
 
                 {/* Bars grouped by material */}
-                {Object.entries(barsByMaterial).map(([material, bars], matIdx) => (
-                    <div key={material} className={matIdx > 0 ? 'page-break' : ''}>
-                        <h2 className="text-xl font-bold uppercase bg-gray-900 text-white px-4 py-2 mb-4 tracking-wider">
-                            {material}
-                        </h2>
+                {Object.entries(barsByMaterial).map(([material, materialBars], matIdx) => {
+                    // Group identical bars within the material
+                    const groupedBars = materialBars.reduce((acc, bar) => {
+                        const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.cuts.map(c => c.length).join(',')}`;
+                        if (!acc[signature]) {
+                            acc[signature] = { ...bar, groupQuantity: 1 };
+                        } else {
+                            acc[signature].groupQuantity++;
+                        }
+                        return acc;
+                    }, {} as Record<string, typeof materialBars[0] & { groupQuantity: number }>);
 
-                        <div className="space-y-5">
-                            {bars.map((bar, barIdx) => (
-                                <div key={bar.id} className="border border-gray-300 rounded p-4">
-                                    {/* Bar Header */}
-                                    <div className="flex justify-between items-center mb-2 text-sm">
-                                        <span className="font-bold text-base">
-                                            Barra #{barIdx + 1} — {bar.length}mm {bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
-                                        </span>
-                                        <div className="flex gap-4">
+                    return (
+                        <div key={material} className={matIdx > 0 ? 'page-break' : ''}>
+                            <h2 className="text-xl font-bold uppercase bg-gray-900 text-white px-4 py-2 mb-4 tracking-wider">
+                                {material}
+                            </h2>
+
+                            <div className="space-y-5">
+                                {Object.values(groupedBars).map((bar, barIdx) => (
+                                    <div key={bar.id} className="border border-gray-300 rounded p-4 relative">
+                                        {/* Grouping Indicator */}
+                                        {bar.groupQuantity > 1 && (
+                                            <div className="absolute -top-3 -left-3 bg-[var(--color-accent)] text-white font-bold px-3 py-1 rounded shadow-md text-sm border-2 border-white transform rotate-[-5deg]">
+                                                CORTAR {bar.groupQuantity} BARRAS IGUAIS
+                                            </div>
+                                        )}
+
+                                        {/* Bar Header */}
+                                        <div className="flex justify-between items-center mb-2 text-sm mt-1">
+                                            <span className="font-bold text-base">
+                                                {bar.groupQuantity > 1 ? `Lote #${barIdx + 1}` : `Barra #${barIdx + 1}`} — {bar.length}mm {bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
+                                            </span>
+                                            <div className="flex gap-4">
+                                                {bar.reusableScrap > 0 && (
+                                                    <span className="text-amber-700 font-bold">Sobra: {bar.reusableScrap}mm → Estoque</span>
+                                                )}
+                                                {bar.trueWaste > 0 && (
+                                                    <span className="text-red-700 font-bold">Sucata: {bar.trueWaste}mm</span>
+                                                )}
+                                                {bar.waste === 0 && (
+                                                    <span className="text-green-700 font-bold">Sem Perda ✓</span>
+                                                )}
+                                            </div>
+                                        </div>
+
+                                        {/* Visual Bar */}
+                                        <div className={`h-14 bg-gray-200 rounded flex overflow-hidden border-2 mb-3 ${bar.groupQuantity > 1 ? 'border-orange-500 ring-4 ring-orange-100 ring-offset-1' : 'border-gray-400'}`}>
+                                            {bar.cuts.map((cut, cutIdx) => (
+                                                <div
+                                                    key={cutIdx}
+                                                    style={{ width: `${(cut.length / bar.length) * 100}%` }}
+                                                    className="h-full bg-gray-800 border-r-2 border-white flex items-center justify-center text-white text-sm font-bold"
+                                                >
+                                                    {cut.length}
+                                                </div>
+                                            ))}
+                                            {bar.waste > 0 && (
+                                                <div
+                                                    style={{ width: `${(bar.waste / bar.length) * 100}%` }}
+                                                    className="h-full bg-red-200 flex items-center justify-center text-red-800 text-xs font-bold border-l-2 border-red-300"
+                                                >
+                                                    {bar.waste}
+                                                </div>
+                                            )}
+                                        </div>
+
+                                        {/* Cut Checklist */}
+                                        <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm font-medium">
+                                            {bar.cuts.map((cut, cutIdx) => (
+                                                <div key={cutIdx} className="flex items-center gap-2">
+                                                    <span className="inline-block w-4 h-4 border-2 border-gray-900 rounded-sm flex-shrink-0"></span>
+                                                    <span>
+                                                        Cortar <strong>{cut.length}mm</strong> {cut.description ? `— ${cut.description}` : ''}
+                                                    </span>
+                                                </div>
+                                            ))}
                                             {bar.reusableScrap > 0 && (
-                                                <span className="text-amber-700 font-bold">Sobra: {bar.reusableScrap}mm → Estoque</span>
+                                                <div className="flex items-center gap-2 text-amber-700">
+                                                    <span className="inline-block w-4 h-4 border-2 border-amber-700 rounded-sm flex-shrink-0"></span>
+                                                    <span>Devolver <strong>{bar.reusableScrap}mm</strong> ao estoque.</span>
+                                                </div>
                                             )}
                                             {bar.trueWaste > 0 && (
-                                                <span className="text-red-700 font-bold">Sucata: {bar.trueWaste}mm</span>
-                                            )}
-                                            {bar.waste === 0 && (
-                                                <span className="text-green-700 font-bold">Sem Perda ✓</span>
+                                                <div className="flex items-center gap-2 text-red-600">
+                                                    <span className="inline-block w-4 h-4 border-2 border-red-600 rounded-sm flex-shrink-0"></span>
+                                                    <span>Descartar sucata de <strong>{bar.trueWaste}mm</strong></span>
+                                                </div>
                                             )}
                                         </div>
                                     </div>
-
-                                    {/* Visual Bar */}
-                                    <div className="h-14 bg-gray-200 rounded flex overflow-hidden border-2 border-gray-400 mb-3">
-                                        {bar.cuts.map((cut, cutIdx) => (
-                                            <div
-                                                key={cutIdx}
-                                                style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                                className="h-full bg-gray-800 border-r-2 border-white flex items-center justify-center text-white text-sm font-bold"
-                                            >
-                                                {cut.length}
-                                            </div>
-                                        ))}
-                                        {bar.waste > 0 && (
-                                            <div
-                                                style={{ width: `${(bar.waste / bar.length) * 100}%` }}
-                                                className="h-full bg-red-200 flex items-center justify-center text-red-800 text-xs font-bold"
-                                            >
-                                                {bar.waste}
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    {/* Cut Checklist */}
-                                    <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm">
-                                        {bar.cuts.map((cut, cutIdx) => (
-                                            <div key={cutIdx} className="flex items-center gap-2">
-                                                <span className="inline-block w-4 h-4 border border-gray-900 flex-shrink-0"></span>
-                                                <span>Cortar <strong>{cut.length}mm</strong> {cut.description ? `— ${cut.description}` : ''}</span>
-                                            </div>
-                                        ))}
-                                        {bar.reusableScrap > 0 && (
-                                            <div className="flex items-center gap-2 text-amber-700">
-                                                <span className="inline-block w-4 h-4 border border-amber-700 flex-shrink-0"></span>
-                                                <span>Devolver <strong>{bar.reusableScrap}mm</strong> ao estoque. Etiquetar!</span>
-                                            </div>
-                                        )}
-                                        {bar.trueWaste > 0 && (
-                                            <div className="flex items-center gap-2 text-red-600">
-                                                <span className="inline-block w-4 h-4 border border-red-600 flex-shrink-0"></span>
-                                                <span>Descartar sucata de <strong>{bar.trueWaste}mm</strong></span>
-                                            </div>
-                                        )}
-                                    </div>
-                                </div>
-                            ))}
+                                ))}
+                            </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
 
                 {/* Purchase List Summary */}
                 {result.purchaseList && result.purchaseList.length > 0 && (
