@@ -160,56 +160,64 @@ export function StepReview({
                 </div>
             </div>
 
-            {/* Optimization Settings */}
-            <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
-                <h3 className="text-lg font-medium text-gray-900 font-mono mb-4">Configurações de Otimização</h3>
-                <p className="text-sm text-gray-500 mb-4">Defina o comprimento padrão da barra de compra para cada material.</p>
+            {/* Optimization Settings — only for materials that go through the optimizer */}
+            {(() => {
+                const optimizableMaterials = uniqueMaterials.filter(mat =>
+                    requests.some(r => r.material.trim() === mat && !r.skipOptimization)
+                );
+                if (optimizableMaterials.length === 0) return null;
+                return (
+                    <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
+                        <h3 className="text-lg font-medium text-gray-900 font-mono mb-4">Configurações de Otimização</h3>
+                        <p className="text-sm text-gray-500 mb-4">Defina o comprimento padrão da barra de compra para cada material.</p>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-                    {uniqueMaterials.map(material => (
-                        <div key={material} className="bg-gray-50 p-3 rounded-md border border-gray-200">
-                            <label htmlFor={`len-${material}`} className="block text-xs font-medium text-gray-700 font-mono truncate mb-1" title={material}>
-                                {material}
-                            </label>
-                            <div className="relative rounded-md shadow-sm">
-                                <input
-                                    type="number"
-                                    id={`len-${material}`}
-                                    className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                    placeholder="6000"
-                                    value={standardBarLengths[material] || 6000}
-                                    onChange={(e) => setStandardBarLengths(prev => ({ ...prev, [material]: Number(e.target.value) }))}
-                                />
-                                <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                    <span className="text-gray-500 sm:text-xs">mm</span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                            {optimizableMaterials.map(material => (
+                                <div key={material} className="bg-gray-50 p-3 rounded-md border border-gray-200">
+                                    <label htmlFor={`len-${material}`} className="block text-xs font-medium text-gray-700 font-mono truncate mb-1" title={material}>
+                                        {material}
+                                    </label>
+                                    <div className="relative rounded-md shadow-sm">
+                                        <input
+                                            type="number"
+                                            id={`len-${material}`}
+                                            className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                            placeholder="6000"
+                                            value={standardBarLengths[material] || 6000}
+                                            onChange={(e) => setStandardBarLengths(prev => ({ ...prev, [material]: Number(e.target.value) }))}
+                                        />
+                                        <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                            <span className="text-gray-500 sm:text-xs">mm</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        <div className="mt-6 border-t border-gray-200 pt-6">
+                            <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
+                                <label htmlFor="max-scrap" className="block text-sm font-medium text-gray-700 font-mono mb-1">
+                                    Comprimento Máximo de Sucata
+                                </label>
+                                <p className="text-xs text-gray-500 mb-3">Retalhos menores que este valor não retornarão ao estoque (considerados sucata/perda total).</p>
+                                <div className="relative rounded-md shadow-sm max-w-[200px]">
+                                    <input
+                                        type="number"
+                                        id="max-scrap"
+                                        className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
+                                        placeholder="1000"
+                                        value={maxScrapLength}
+                                        onChange={(e) => setMaxScrapLength(Number(e.target.value))}
+                                    />
+                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
+                                        <span className="text-gray-500 sm:text-xs">mm</span>
+                                    </div>
                                 </div>
                             </div>
                         </div>
-                    ))}
-                </div>
-
-                <div className="mt-6 border-t border-gray-200 pt-6">
-                    <div className="bg-gray-50 p-4 rounded-md border border-gray-200">
-                        <label htmlFor="max-scrap" className="block text-sm font-medium text-gray-700 font-mono mb-1">
-                            Comprimento Máximo de Sucata
-                        </label>
-                        <p className="text-xs text-gray-500 mb-3">Retalhos menores que este valor não retornarão ao estoque (considerados sucata/perda total).</p>
-                        <div className="relative rounded-md shadow-sm max-w-[200px]">
-                            <input
-                                type="number"
-                                id="max-scrap"
-                                className="focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md"
-                                placeholder="1000"
-                                value={maxScrapLength}
-                                onChange={(e) => setMaxScrapLength(Number(e.target.value))}
-                            />
-                            <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                <span className="text-gray-500 sm:text-xs">mm</span>
-                            </div>
-                        </div>
                     </div>
-                </div>
-            </div>
+                );
+            })()}
 
             <div className="flex justify-end space-x-3">
                 <button
