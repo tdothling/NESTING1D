@@ -3,7 +3,7 @@
  * 
  * Approach:
  * - Cold-formed profiles (Ue, Cartola, Z, etc.) → calculated from dimensions
- * - W/HP hot-rolled profiles → static catalog (Gerdau/NBR 15980)
+ * - W/HP hot-rolled profiles → weight comes from the name (ex: W200x19.3 = 19.3 kg/m)
  */
 
 // ─── Types ─────────────────────────────────────────────────
@@ -67,7 +67,7 @@ export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof ProfileDimensio
     barra_chata: ['width', 'thickness'],
     barra_redonda: ['diameter'],
     chapa: ['thickness', 'width'],
-    w_hp: ['height', 'width', 'thickness', 'flangeThickness'],
+    w_hp: [], // Weight comes from the profile name (ex: W200x19.3 = 19.3 kg/m)
 };
 
 /** Human-readable labels for dimension fields (for UI forms) */
@@ -96,4 +96,3 @@ export const DEFAULT_STANDARD_LENGTHS: Record<ProfileCategory, number> = {
 // ─── Re-exports ────────────────────────────────────────────
 
 export { calculateWeightKgM, buildProfile } from './calculator';
-export { W_HP_CATALOG, searchWHPCatalog, findWHPProfile } from './w-hp-catalog';

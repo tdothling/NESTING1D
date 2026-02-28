@@ -1,5 +1,5 @@
 import { CutRequest } from "./types";
-import { calculateWeightKgM, searchWHPCatalog } from "./steel-catalog";
+import { calculateWeightKgM } from "./steel-catalog";
 import type { ProfileCategory, ProfileDimensions } from "./steel-catalog";
 
 const VALID_TYPES: ProfileCategory[] = [
@@ -61,13 +61,8 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
       let weightKgM = item.weightKgM || 0;
 
       if (profileType === 'w_hp') {
-        // W/HP: search our static catalog by material name first
-        const catalogResults = searchWHPCatalog(item.material);
-        if (catalogResults.length > 0) {
-          weightKgM = catalogResults[0].weightKgM;
-        } else if (profileDimensions) {
-          try { weightKgM = calculateWeightKgM('w_hp', profileDimensions); } catch { }
-        }
+        // W/HP: weight is in the profile name (e.g. W200x19.3 = 19.3 kg/m)
+        // The AI schema already extracts weightKgM from the name, so nothing extra needed
       } else if (profileType === 'chapa' && profileDimensions) {
         // Chapa: total piece weight = width × length × thickness × 7850 / 1e9
         const w = profileDimensions.width || 0;
@@ -77,7 +72,7 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
           weightKgM = Math.round((w * l * t * 7850 / 1e9) * 100) / 100;
         }
       } else if (profileType && profileDimensions) {
-        // All other profiles: formula
+        // All other profiles: calculate from formula
         try {
           weightKgM = calculateWeightKgM(profileType, profileDimensions);
         } catch {

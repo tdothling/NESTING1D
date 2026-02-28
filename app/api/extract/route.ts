@@ -38,12 +38,15 @@ export async function POST(req: Request) {
     - "barra_chata" = Barra Chata (has width, thickness)
     - "barra_redonda" = Barra Redonda (has diameter)
     - "chapa" = Chapa de Aço (has thickness, width)
-    - "w_hp" = Perfil W or HP laminado (has height, width, thickness, flangeThickness)
+    - "w_hp" = Perfil W or HP laminado. For W/HP, the weight per meter IS ALREADY IN THE NAME (e.g. "W 200x19.3" means 19.3 kg/m). Extract this as weightKgM directly. No geometric dimensions needed.
     
     Parse the dimensions from the material name. For example:
     - "Ue 200x75x25x3.00" → profileType:"ue", profileHeight:200, profileWidth:75, profileLipHeight:25, profileThickness:3.00
     - "L 2x3/16" → profileType:"cantoneira", profileWidth:50.8 (2" in mm), profileThickness:4.76 (3/16" in mm)
     - "BR Ø1" → profileType:"barra_redonda", profileDiameter:25.4
+    - "W 310x38.7" → profileType:"w_hp", weightKgM:38.7 (the number after x IS the weight in kg/m)
+
+    CRITICAL FOR W/HP: The number after 'x' in the name IS the linear weight in kg/m. Always extract it as weightKgM.
 
     All dimensions MUST be in millimeters. Convert inches to mm (1" = 25.4mm).
     
@@ -77,6 +80,7 @@ export async function POST(req: Request) {
                             quantity: { type: Type.NUMBER },
                             description: { type: Type.STRING },
                             skipOptimization: { type: Type.BOOLEAN, description: "True if it's a plate (Chapa) and shouldn't be nested" },
+                            weightKgM: { type: Type.NUMBER, description: "Linear weight in kg/m. For W/HP profiles, extract from the name (e.g. W200x19.3 = 19.3 kg/m)" },
                             profileType: { type: Type.STRING, description: "Profile type code: ue, u_simples, cartola, z, cantoneira, barra_chata, barra_redonda, chapa, w_hp" },
                             profileHeight: { type: Type.NUMBER, description: "Web height in mm" },
                             profileWidth: { type: Type.NUMBER, description: "Flange/leg width in mm" },
