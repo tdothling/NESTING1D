@@ -45,6 +45,9 @@ export function optimizeCuts(
   let allItemsNotFit: CutRequest[] = [];
   let currentStock = stock.map(s => ({ ...s })); // Deep copy
 
+  // Track how many NEW standard bars we need per material (for purchase list)
+  const newBarsPurchased: Record<string, number> = {};
+
   // Process each material separately
   for (const material of Object.keys(requestsByMaterial)) {
     const materialRequests = requestsByMaterial[material];
@@ -55,37 +58,62 @@ export function optimizeCuts(
       .map((s, index) => ({ ...s, originalIndex: index }))
       .filter(s => s.material.trim().toLowerCase() === material.toLowerCase());
 
+    // Helper: consume one bar from stock or request a new one
+    const consumeBar = (minLength: number): { sourceId: string; totalLength: number; isScrap: boolean } => {
+      // Find best stock candidate
+      let candidates = materialStockIndices.filter(
+        s => currentStock[s.originalIndex].quantity > 0 && s.length >= minLength
+      );
+
+      // Sort: Scrap first, then Smallest Length (prefer fitting tightly)
+      candidates.sort((a, b) => {
+        if (a.isScrap !== b.isScrap) return a.isScrap ? -1 : 1;
+        return a.length - b.length;
+      });
+
+      if (candidates.length > 0) {
+        const best = candidates[0];
+        currentStock[best.originalIndex].quantity -= 1;
+        return { sourceId: best.id, totalLength: best.length, isScrap: best.isScrap };
+      }
+
+      // No stock available → new standard bar
+      newBarsPurchased[material] = (newBarsPurchased[material] || 0) + 1;
+      return { sourceId: 'new-standard', totalLength: standardLength, isScrap: false };
+    };
+
     // Expand requests into individual items AND handle splitting logic
     let itemsToCut: { id: string; length: number; description?: string }[] = [];
 
     materialRequests.forEach((req) => {
       for (let i = 0; i < req.quantity; i++) {
-        // Check if item needs splitting
+        // Check if item needs splitting (longer than standard bar)
         if (req.length > standardLength) {
-          // Calculate how many full bars are needed
           const fullBarsNeeded = Math.floor(req.length / standardLength);
           const remainder = req.length % standardLength;
 
-          // Create "virtual" full bars immediately
+          // Each full split piece consumes a real bar (from stock or purchase)
           for (let b = 0; b < fullBarsNeeded; b++) {
+            const source = consumeBar(standardLength);
+
             allResults.push({
               id: `${material.replace(/\s+/g, '-')}-split-full-${crypto.randomUUID()}`,
               material: material,
-              length: standardLength,
+              length: source.totalLength,
               cuts: [{ length: standardLength, description: `${req.description || 'Peça Longa'} (Parte ${b + 1})` }],
-              waste: 0,
-              trueWaste: 0,
+              waste: source.totalLength - standardLength,
+              trueWaste: source.totalLength - standardLength < options.maxScrapLength ? source.totalLength - standardLength : 0,
               trueWasteKg: 0,
-              reusableScrap: 0,
-              isScrapUsed: false,
-              sourceId: 'new-standard'
+              reusableScrap: source.totalLength - standardLength >= options.maxScrapLength ? source.totalLength - standardLength : 0,
+              isScrapUsed: source.isScrap,
+              sourceId: source.sourceId
             });
           }
 
           // Add remainder to items to be cut, if significant
           if (remainder > 0) {
             itemsToCut.push({
-              id: `${req.id}-remainder`,
+              id: `${req.id}-remainder-${i}`,
               length: remainder,
               description: `${req.description || 'Peça Longa'} (Final)`,
             });
@@ -140,50 +168,17 @@ export function optimizeCuts(
         bin.remainingLength -= needed;
         placed = true;
       } else {
-        // 2. Open a new bin
-        // Find best stock candidate
-        let candidates = [];
+        // 2. Open a new bin using the consumeBar helper
+        const source = consumeBar(item.length);
 
-        for (const stockItem of materialStockIndices) {
-          if (currentStock[stockItem.originalIndex].quantity > 0 && stockItem.length >= item.length) {
-            candidates.push(stockItem);
-          }
-        }
-
-        // Sort candidates: Scrap first, then Smallest Length
-        candidates.sort((a, b) => {
-          if (a.isScrap !== b.isScrap) return a.isScrap ? -1 : 1;
-          return a.length - b.length;
-        });
-
-        let selectedSource = null;
-
-        if (candidates.length > 0) {
-          const best = candidates[0];
-          currentStock[best.originalIndex].quantity -= 1;
-
-          selectedSource = {
-            sourceId: best.id,
-            totalLength: best.length,
-            isScrap: best.isScrap
-          };
-        } else {
-          // Use new standard bar
-          selectedSource = {
-            sourceId: 'new-standard',
-            totalLength: standardLength,
-            isScrap: false
-          };
-        }
-
-        if (selectedSource.totalLength >= item.length) {
+        if (source.totalLength >= item.length) {
           openBins.push({
-            sourceId: selectedSource.sourceId,
+            sourceId: source.sourceId,
             material: material,
-            totalLength: selectedSource.totalLength,
-            remainingLength: selectedSource.totalLength - item.length,
+            totalLength: source.totalLength,
+            remainingLength: source.totalLength - item.length,
             cuts: [{ length: item.length, description: item.description }],
-            isScrap: selectedSource.isScrap
+            isScrap: source.isScrap
           });
           placed = true;
         }
@@ -225,30 +220,26 @@ export function optimizeCuts(
     allResults = [...allResults, ...materialResults];
   }
 
-  // Generate Purchase List
-  const purchaseMap: Record<string, Record<number, number>> = {};
-
-  allResults.forEach(bar => {
-    if (bar.sourceId === 'new-standard') {
-      if (!purchaseMap[bar.material]) {
-        purchaseMap[bar.material] = {};
-      }
-      if (!purchaseMap[bar.material][bar.length]) {
-        purchaseMap[bar.material][bar.length] = 0;
-      }
-      purchaseMap[bar.material][bar.length]++;
-    }
-  });
-
+  // Generate Purchase List from tracked new bar purchases
+  // We group by material + standardLength (the bar you actually buy)
   const purchaseList: PurchaseItem[] = [...directPurchases];
-  for (const mat in purchaseMap) {
-    for (const len in purchaseMap[mat]) {
-      purchaseList.push({
-        material: mat,
-        length: Number(len),
-        quantity: purchaseMap[mat][len]
-      });
+
+  const purchaseMap: Record<string, number> = {};
+  for (const bar of allResults) {
+    if (bar.sourceId === 'new-standard') {
+      const standardLength = options.standardBarLengths[bar.material] || options.defaultStandardLength;
+      const key = `${bar.material}|${standardLength}`;
+      purchaseMap[key] = (purchaseMap[key] || 0) + 1;
     }
+  }
+
+  for (const key of Object.keys(purchaseMap)) {
+    const [mat, len] = key.split('|');
+    purchaseList.push({
+      material: mat,
+      length: Number(len),
+      quantity: purchaseMap[key]
+    });
   }
 
   const totalTrueWaste = allResults.reduce((acc, bar) => acc + bar.trueWaste, 0);
@@ -265,3 +256,4 @@ export function optimizeCuts(
     totalReusableScrap
   };
 }
+

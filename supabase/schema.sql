@@ -1,32 +1,32 @@
--- Enable pgcrypto for UUID generation
-CREATE EXTENSION IF NOT EXISTS pgcrypto;
-
--- 1. Create Projects Table
-CREATE TABLE projects (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  name TEXT NOT NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  requests_json JSONB,
-  result_json JSONB
-);
-
--- 2. Create Stock Table
-CREATE TABLE stock (
-  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  material TEXT NOT NULL,
-  length INTEGER NOT NULL,
-  quantity INTEGER NOT NULL DEFAULT 0,
-  weight_kg_m NUMERIC(10, 2) DEFAULT 0,
-  is_scrap BOOLEAN DEFAULT false,
-  origin_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- Note: We are using JSONB in the 'projects' table to store the complex array of 'requests' 
--- and the deeply nested 'OptimizationResult' object to speed up this initial migration. 
--- In a highly structured scalable app, these would be normalized into relational tables, 
--- but JSONB in PostgreSQL provides excellent querying flexibility and performance for document-style data.
-
--- Note: We can add RLS (Row Level Security) policies here later when we add user Authentication.
--- For now, allow public access if you haven't enabled RLS on these tables, or keep them private and let API keys bypass.
+ITEM;QTD;DIMENSÕES;MATERIAL;COMPRIMENTO;PESO UNITARIO;PESO TOTAL;OBSERVAÇÕES
+;3;EIXO 1, 2, 3;;;798.03;2394.08;
+a;3;W 200 x 19,3;;9503;183.41;550.22;
+b;3;HP 250 x 62,0;;5112;316.92;950.76;
+c;3;HP 250 x 62,0;;4802;297.70;893.10;
+;1;EIXO 1A;;;199.67;199.67;
+a;1;W 310 x 21,0;;9508;199.67;199.67;
+;2;VM7, VM8;;;361.09;722.17;
+a;4;[ 150 x 50 x 3;;5030;28.45;113.78;
+b;4;[ 150 x 50 x 3;;960;5.43;21.72;
+c;4;[ 150 x 50 x 2;;2080;7.95;31.80;
+d;4;[ 150 x 50 x 2;;2820;10.78;43.11;
+e;2;[ 150 x 50 x 3;;3760;21.26;42.53;
+f;4;[ 150 x 50 x 3;;930;5.26;21.04;
+g;10;[ 150 x 50 x 2;;1199;4.58;45.84;
+h;10;[ 142 x 40 x 2;;1506;5.09;50.90;
+i;18;[ 142 x 40 x 2;;1494;5.05;90.89;
+j;4;[ 150 x 50 x 3;;1166;6.59;26.38;
+k;26;[ 142 x 40 x 2;;1166;3.94;102.53;
+l;2;[ 150 x 50 x 3;;1199;6.78;13.57;
+m;8;[ 142 x 40 x 2;;1481;5.01;40.08;
+n;8;[ 150 x 50 x 2;;1166;4.46;35.65;
+o;2;[ 150 x 50 x 3;;3747;21.19;42.38;
+;2;VM1, VM5;;;134.10;268.20;
+a;4;[ 100 x 50 x 2;;9499;28.85;115.39;
+b;16;[ 92 x 40 x 2;;1661;4.31;69.02;
+c;4;[ 100 x 50 x 2;;1199;3.64;14.57;
+d;18;[ 92 x 40 x 2;;1166;3.03;54.51;
+e;14;# 6.30x85;ACO;250;1.05;14.71;
+;1;COBERTURA;;;1008.30;1008.30;
+a;UE;@ 50 x 60 x 25 x 2.65;;4695;29.55;236.39;
+b;
