@@ -1,5 +1,5 @@
 import { CutRequest } from "./types";
-import { calculateWeightKgM } from "./steel-catalog";
+import { calculateWeightKgM, searchWHPCatalog } from "./steel-catalog";
 import type { ProfileCategory, ProfileDimensions } from "./steel-catalog";
 
 const VALID_TYPES: ProfileCategory[] = [
@@ -57,9 +57,41 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
         }
         : undefined;
 
-      // Auto-calculate weight if we have type + dimensions
+      // Auto-calculate weight
       let weightKgM = item.weightKgM || 0;
-      if (profileType && profileDimensions) {
+
+      if (profileType === 'w_hp') {
+        // W/HP: search our static catalog by material name
+        const catalogResults = searchWHPCatalog(item.material);
+        if (catalogResults.length > 0) {
+          // Use the first match from catalog
+          const match = catalogResults[0];
+          weightKgM = match.weightKgM;
+          // Also fill dimensions from catalog if our AI missed them
+          if (profileDimensions && match.dimensions) {
+            Object.assign(profileDimensions, {
+              height: profileDimensions.height || match.dimensions.height,
+              width: profileDimensions.width || match.dimensions.width,
+              thickness: profileDimensions.thickness || match.dimensions.thickness,
+              flangeThickness: profileDimensions.flangeThickness || match.dimensions.flangeThickness,
+            });
+          }
+        } else if (profileDimensions) {
+          // Not found in catalog — fallback to formula
+          try {
+            weightKgM = calculateWeightKgM('w_hp', profileDimensions);
+          } catch { /* incomplete dims */ }
+        }
+      } else if (profileType === 'chapa' && profileDimensions) {
+        // Chapa: total piece weight = width(mm) × length(mm) × thickness(mm) × 7850 / 1e9
+        const w = profileDimensions.width || 0;
+        const t = profileDimensions.thickness || 0;
+        const l = item.length || 0; // length from CutRequest in mm
+        if (w > 0 && t > 0 && l > 0) {
+          weightKgM = Math.round((w * l * t * 7850 / 1e9) * 100) / 100;
+        }
+      } else if (profileType && profileDimensions) {
+        // All other profiles: calculate from formula
         try {
           weightKgM = calculateWeightKgM(profileType, profileDimensions);
         } catch {
@@ -84,3 +116,4 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
     throw error;
   }
 }
+

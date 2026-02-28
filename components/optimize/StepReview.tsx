@@ -6,6 +6,7 @@ import {
     REQUIRED_DIMENSIONS,
     DIMENSION_LABELS,
     calculateWeightKgM,
+    searchWHPCatalog,
 } from '@/lib/steel-catalog';
 import type { ProfileCategory, ProfileDimensions } from '@/lib/steel-catalog';
 
@@ -57,7 +58,27 @@ function ProfileDimensionEditor({
         updateRequest(req.id, 'profileDimensions', newDims);
 
         // Try to recalculate weight
-        if (req.profileType) {
+        if (req.profileType === 'w_hp') {
+            // W/HP: search catalog by material name
+            const results = searchWHPCatalog(req.material);
+            if (results.length > 0) {
+                updateRequest(req.id, 'weightKgM', results[0].weightKgM);
+            } else {
+                try {
+                    const weight = calculateWeightKgM('w_hp', newDims);
+                    updateRequest(req.id, 'weightKgM', weight);
+                } catch { /* incomplete */ }
+            }
+        } else if (req.profileType === 'chapa') {
+            // Chapa: total piece weight = width × length × thickness × 7850 / 1e9
+            const w = newDims.width || 0;
+            const t = newDims.thickness || 0;
+            const l = req.length || 0;
+            if (w > 0 && t > 0 && l > 0) {
+                const weight = Math.round((w * l * t * 7850 / 1e9) * 100) / 100;
+                updateRequest(req.id, 'weightKgM', weight);
+            }
+        } else if (req.profileType) {
             try {
                 const weight = calculateWeightKgM(req.profileType, newDims);
                 updateRequest(req.id, 'weightKgM', weight);
@@ -65,9 +86,25 @@ function ProfileDimensionEditor({
                 // Incomplete dimensions — don't update weight
             }
         }
-    }, [req.id, req.profileType, req.profileDimensions, updateRequest]);
+    }, [req.id, req.profileType, req.profileDimensions, req.material, req.length, updateRequest]);
 
     const recalcWeight = useCallback(() => {
+        if (req.profileType === 'w_hp') {
+            const results = searchWHPCatalog(req.material);
+            if (results.length > 0) {
+                updateRequest(req.id, 'weightKgM', results[0].weightKgM);
+                return;
+            }
+        }
+        if (req.profileType === 'chapa' && req.profileDimensions) {
+            const w = req.profileDimensions.width || 0;
+            const t = req.profileDimensions.thickness || 0;
+            const l = req.length || 0;
+            if (w > 0 && t > 0 && l > 0) {
+                updateRequest(req.id, 'weightKgM', Math.round((w * l * t * 7850 / 1e9) * 100) / 100);
+                return;
+            }
+        }
         if (req.profileType && req.profileDimensions) {
             try {
                 const weight = calculateWeightKgM(req.profileType, req.profileDimensions);
@@ -76,7 +113,7 @@ function ProfileDimensionEditor({
                 // incomplete
             }
         }
-    }, [req.id, req.profileType, req.profileDimensions, updateRequest]);
+    }, [req.id, req.profileType, req.profileDimensions, req.material, req.length, updateRequest]);
 
     const requiredDims = req.profileType ? REQUIRED_DIMENSIONS[req.profileType] : [];
 
