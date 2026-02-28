@@ -107,26 +107,47 @@ function ProfileDimensionEditor({
             {/* Dimension inputs — only shown when expanded and type is selected */}
             {expanded && req.profileType && (
                 <div className="bg-gray-50 rounded-md p-2 border border-gray-200 space-y-1.5">
-                    <div className="grid grid-cols-2 gap-1.5">
-                        {requiredDims.map(dimKey => (
-                            <div key={dimKey}>
-                                <label className="block text-[10px] text-gray-500 leading-tight mb-0.5">
-                                    {DIMENSION_LABELS[dimKey]}
-                                </label>
-                                <input
-                                    type="number"
-                                    step="0.01"
-                                    value={req.profileDimensions?.[dimKey] || ''}
-                                    placeholder="0"
-                                    onChange={(e) => handleDimensionChange(dimKey, Number(e.target.value))}
-                                    className="block w-full border-gray-300 rounded text-xs py-1 px-1.5 focus:ring-indigo-500 focus:border-indigo-500"
-                                />
-                            </div>
-                        ))}
-                    </div>
+                    {req.profileType === 'w_hp' ? (
+                        /* W/HP: weight comes from the profile name, show direct weight input */
+                        <div>
+                            <label className="block text-[10px] text-gray-500 leading-tight mb-0.5">
+                                Peso Linear (kg/m) — extraído do nome do perfil
+                            </label>
+                            <input
+                                type="number"
+                                step="0.01"
+                                value={req.weightKgM || ''}
+                                placeholder="Ex: 19.3"
+                                onChange={(e) => updateRequest(req.id, 'weightKgM', Number(e.target.value))}
+                                className="block w-full border-gray-300 rounded text-xs py-1 px-1.5 focus:ring-indigo-500 focus:border-indigo-500"
+                            />
+                            <p className="text-[10px] text-gray-400 mt-1">
+                                W200x<strong>19.3</strong> → 19.3 kg/m
+                            </p>
+                        </div>
+                    ) : (
+                        /* Other profiles: dimension inputs */
+                        <div className="grid grid-cols-2 gap-1.5">
+                            {requiredDims.map(dimKey => (
+                                <div key={dimKey}>
+                                    <label className="block text-[10px] text-gray-500 leading-tight mb-0.5">
+                                        {DIMENSION_LABELS[dimKey]}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        step="0.01"
+                                        value={req.profileDimensions?.[dimKey] || ''}
+                                        placeholder="0"
+                                        onChange={(e) => handleDimensionChange(dimKey, Number(e.target.value))}
+                                        className="block w-full border-gray-300 rounded text-xs py-1 px-1.5 focus:ring-indigo-500 focus:border-indigo-500"
+                                    />
+                                </div>
+                            ))}
+                        </div>
+                    )}
 
-                    {/* Calculated weight display */}
-                    {req.weightKgM && req.weightKgM > 0 ? (
+                    {/* Calculated weight display (for non W/HP) */}
+                    {req.profileType !== 'w_hp' && req.weightKgM && req.weightKgM > 0 ? (
                         <div className="flex items-center justify-between pt-1 border-t border-gray-200">
                             <span className="text-[10px] text-gray-500">Peso calculado:</span>
                             <span className="text-xs font-medium text-green-700 font-mono">{req.weightKgM} kg/m</span>
