@@ -10,6 +10,7 @@
 
 export type ProfileCategory =
     | 'ue'            // U enrijecido (formado a frio)
+    | 'u_simples'     // U simples (formado a frio, sem enrijecedor)
     | 'cartola'       // Perfil cartola (formado a frio)
     | 'z'             // Perfil Z (formado a frio)
     | 'cantoneira'    // Cantoneira abas iguais
@@ -46,6 +47,7 @@ export type CalculatedProfile = SteelProfile & {
 /** Human-readable labels for UI */
 export const PROFILE_LABELS: Record<ProfileCategory, string> = {
     ue: 'U Enrijecido',
+    u_simples: 'U Simples',
     cartola: 'Perfil Cartola',
     z: 'Perfil Z',
     cantoneira: 'Cantoneira Abas Iguais',
@@ -58,6 +60,7 @@ export const PROFILE_LABELS: Record<ProfileCategory, string> = {
 /** Which dimension fields are required per category */
 export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof ProfileDimensions)[]> = {
     ue: ['height', 'width', 'thickness', 'lipHeight'],
+    u_simples: ['height', 'width', 'thickness'],
     cartola: ['height', 'width', 'thickness', 'lipHeight'],
     z: ['height', 'width', 'thickness'],
     cantoneira: ['width', 'thickness'],
@@ -80,6 +83,7 @@ export const DIMENSION_LABELS: Record<keyof ProfileDimensions, string> = {
 /** Default standard bar lengths per category */
 export const DEFAULT_STANDARD_LENGTHS: Record<ProfileCategory, number> = {
     ue: 6000,
+    u_simples: 6000,
     cartola: 6000,
     z: 6000,
     cantoneira: 6000,

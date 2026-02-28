@@ -19,6 +19,7 @@ const STEEL_DENSITY_FACTOR = 0.00785; // kg per (mm² · m)
 function validateDimensions(type: ProfileCategory, d: ProfileDimensions): void {
     const required: Record<ProfileCategory, (keyof ProfileDimensions)[]> = {
         ue: ['height', 'width', 'thickness', 'lipHeight'],
+        u_simples: ['height', 'width', 'thickness'],
         cartola: ['height', 'width', 'thickness', 'lipHeight'],
         z: ['height', 'width', 'thickness'],
         cantoneira: ['width', 'thickness'],
@@ -52,6 +53,10 @@ function getLinearDevelopment(type: ProfileCategory, d: ProfileDimensions): numb
         // U Enrijecido: 4 dobras → h - 2t + 2×(b - t) + 2×(d - t)
         case 'ue':
             return (d.height! - 2 * t) + 2 * (d.width! - t) + 2 * (d.lipHeight! - t);
+
+        // U Simples: 2 dobras → h - 2t + 2×(b - t)
+        case 'u_simples':
+            return (d.height! - 2 * t) + 2 * (d.width! - t);
 
         // Cartola: 4 dobras → h - 2t + 2×(b - t) + 2×(d - t)
         case 'cartola':
@@ -87,6 +92,7 @@ export function calculateWeightKgM(
     switch (type) {
         // Cold-formed profiles: linear development × thickness × density
         case 'ue':
+        case 'u_simples':
         case 'cartola':
         case 'z':
         case 'cantoneira':
@@ -153,6 +159,7 @@ function round(value: number, decimals: number): number {
 function generateName(type: ProfileCategory, d: ProfileDimensions): string {
     const prefix: Record<ProfileCategory, string> = {
         ue: 'Ue',
+        u_simples: 'U',
         cartola: 'Cartola',
         z: 'Z',
         cantoneira: 'L',
@@ -168,6 +175,7 @@ function generateName(type: ProfileCategory, d: ProfileDimensions): string {
         case 'ue':
         case 'cartola':
             return `${p} ${d.height}x${d.width}x${d.lipHeight}x${fmt(d.thickness!)}`;
+        case 'u_simples':
         case 'z':
             return `${p} ${d.height}x${d.width}x${fmt(d.thickness!)}`;
         case 'cantoneira':
@@ -192,11 +200,12 @@ function fmt(n: number): string {
 function getFormulaDescription(type: ProfileCategory): string {
     const formulas: Record<ProfileCategory, string> = {
         ue: '[h + 2b + 2d] × t × 0.00785',
+        u_simples: '[h + 2b] × t × 0.00785',
         cartola: '[h + 2b + 2a] × t × 0.00785',
         z: '[h + 2b] × t × 0.00785',
         cantoneira: '[2a - t] × t × 0.00785',
         barra_chata: 'largura × esp × 0.00785',
-        barra_redonda: 'Ø² × 0.006165 / 1000',
+        barra_redonda: 'Ø² × 0.006165',
         chapa: 'largura(m) × esp(mm) × 7.85',
         w_hp: '[h×tw + 2×bf×tf] × 0.00785',
     };

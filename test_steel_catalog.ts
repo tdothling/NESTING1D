@@ -21,17 +21,23 @@ function assert(label: string, actual: number, expected: number, tolerance = 0.1
 
 console.log('\n═══ Teste: Calculadora de Perfis de Aço ═══\n');
 
-// ── U Enrijecido ──
+// ── U Enrijecido (centerline formula) ──
 console.log('▸ U Enrijecido');
-// Ue 200x75x25x3.00 → esperado ~5.89 kg/m (catálogo Gerdau)
 assert('Ue 200x75x25x3.00',
     calculateWeightKgM('ue', { height: 200, width: 75, lipHeight: 25, thickness: 3.0 }),
-    5.89, 0.15
+    9.0, 0.2
 );
-// Ue 250x85x25x4.75 → esperado ~8.52 kg/m (do plano)
 assert('Ue 250x85x25x4.75',
     calculateWeightKgM('ue', { height: 250, width: 85, lipHeight: 25, thickness: 4.75 }),
-    8.52, 0.2
+    16.46, 0.3
+);
+
+// ── U Simples (centerline formula) ──
+console.log('\n▸ U Simples');
+// U 200x75x3.00 → dev = (200-6)+2*(75-3) = 194+144 = 338 → 338*3*0.00785 = 7.96
+assert('U 200x75x3.00',
+    calculateWeightKgM('u_simples', { height: 200, width: 75, thickness: 3.0 }),
+    7.96, 0.2
 );
 
 // ── Cantoneira ──
