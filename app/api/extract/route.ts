@@ -37,7 +37,7 @@ export async function POST(req: Request) {
     - "cantoneira" = Cantoneira de abas iguais (has width, thickness)
     - "barra_chata" = Barra Chata (has width, thickness)
     - "barra_redonda" = Barra Redonda (has diameter)
-    - "chapa" = Chapa de Aço (has thickness, width)
+    - "chapa" = Chapa de Aço (has width in profileWidth, length/comprimento in profileHeight, thickness in profileThickness)
     - "w_hp" = Perfil W or HP laminado. For W/HP, the weight per meter IS ALREADY IN THE NAME (e.g. "W 200x19.3" means 19.3 kg/m). Extract this as weightKgM directly. No geometric dimensions needed.
     
     Parse the dimensions from the material name. For example:

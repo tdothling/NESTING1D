@@ -66,9 +66,10 @@ assert('BC 50.8x6.35',
 
 // ── Chapa ──
 console.log('\n▸ Chapa');
-assert('Chapa 6.35mm x 1000mm',
-    calculateWeightKgM('chapa', { thickness: 6.35, width: 1000 }),
-    49.85, 0.5
+// Chapa 85x250 e=6.3mm → 85 × 250 × 6.3 × 7850 / 1e9 = 1.05 kg
+assert('Chapa 85x250 e=6.3mm',
+    calculateWeightKgM('chapa', { width: 85, height: 250, thickness: 6.3 }),
+    1.05, 0.1
 );
 
 // ── buildProfile ──

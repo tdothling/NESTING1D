@@ -25,7 +25,7 @@ function validateDimensions(type: ProfileCategory, d: ProfileDimensions): void {
         cantoneira: ['width', 'thickness'],
         barra_chata: ['width', 'thickness'],
         barra_redonda: ['diameter'],
-        chapa: ['thickness', 'width'],
+        chapa: ['width', 'height', 'thickness'],
         w_hp: ['height', 'width', 'thickness', 'flangeThickness'],
     };
 
@@ -107,11 +107,10 @@ export function calculateWeightKgM(
             return round(d.diameter! * d.diameter! * 0.006165, 2);
         }
 
-        // Chapa: treated as kg/m² for a given width
-        // weight = width(m) × thickness(mm) × 7.85 kg/(m·mm)
+        // Chapa: total piece weight
+        // weight(kg) = width(mm) × height(mm) × thickness(mm) × 7850 / 1e9
         case 'chapa': {
-            const widthM = d.width! / 1000;
-            return round(widthM * d.thickness! * 7.85, 2);
+            return round(d.width! * d.height! * d.thickness! * 7850 / 1e9, 2);
         }
 
         // W/HP: approximation by areas (alma + 2×mesas)

@@ -66,16 +66,16 @@ export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof ProfileDimensio
     cantoneira: ['width', 'thickness'],
     barra_chata: ['width', 'thickness'],
     barra_redonda: ['diameter'],
-    chapa: ['thickness', 'width'],
+    chapa: ['width', 'height', 'thickness'],
     w_hp: [], // Weight comes from the profile name (ex: W200x19.3 = 19.3 kg/m)
 };
 
 /** Human-readable labels for dimension fields (for UI forms) */
 export const DIMENSION_LABELS: Record<keyof ProfileDimensions, string> = {
-    height: 'Altura da alma (mm)',
-    width: 'Largura da mesa/aba (mm)',
+    height: 'Comprimento / Altura (mm)',
+    width: 'Largura (mm)',
     thickness: 'Espessura (mm)',
-    lipHeight: 'Altura do enrijecedor (mm)',
+    lipHeight: 'Enrijecedor (mm)',
     flangeThickness: 'Espessura da mesa (mm)',
     diameter: 'Diâmetro (mm)',
 };
