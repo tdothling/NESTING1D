@@ -14,6 +14,7 @@ export const getStock = async (): Promise<StockItem[]> => {
     length: item.length,
     quantity: item.quantity,
     weightKgM: item.weight_kg_m,
+    pricePerMeter: item.price_per_meter,
     isScrap: item.is_scrap,
     originProjectId: item.origin_project_id
   }));
@@ -27,6 +28,7 @@ export const saveStock = async (stock: StockItem[]) => {
       length: item.length,
       quantity: item.quantity,
       weight_kg_m: item.weightKgM || 0,
+      price_per_meter: item.pricePerMeter || 0,
       is_scrap: item.isScrap,
       origin_project_id: item.originProjectId || null
     }))
@@ -53,25 +55,18 @@ export const deleteStockItem = async (id: string) => {
 };
 
 export const getProjects = async (): Promise<Project[]> => {
-  // To keep it simple for now, we just fetch projects. 
-  // In a real scenario, you'd join with requests and optimization_bars.
-  // For this quick migration, we'll store the complex `result` and `requests` as JSONB or 
-  // we do the full relational fetch. Let's do a simplified relational fetch.
-
   const { data: projectsData, error } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
   if (error) {
     console.error('Error fetching projects:', error);
     return [];
   }
 
-  // We are returning basic project info here. Fully migrating the complex OptimizationResult 
-  // to relational tables requires significant restructuring of the app state.
-  // For the sake of this transition, we'll treat the DB as the source of truth for basic lists.
   return projectsData.map(p => ({
     id: p.id,
     name: p.name,
     createdAt: p.created_at,
-    requests: [], // Will be fetched on demand or joined later
+    requests: p.requests_json || [],
+    result: p.result_json || undefined,
   }));
 };
 
