@@ -44,16 +44,19 @@ export default function PrintLivePage() {
             <style jsx global>{`
         @media print {
           @page {
-            size: A4 landscape;
+            size: A4 portrait;
             margin: 10mm;
           }
           body { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
           .no-print { display: none !important; }
-          .page-break { page-break-before: always; }
+          .page-break { break-before: page; }
+          .bar-card { break-inside: avoid; }
+          .print-header { break-inside: avoid; }
+          .material-title { break-after: avoid; }
         }
       `}</style>
 
-            <div className="max-w-[1100px] mx-auto p-6 font-mono text-gray-900 bg-white">
+            <div className="max-w-[700px] mx-auto p-6 font-mono text-gray-900 bg-white">
                 {/* Print Button */}
                 <div className="no-print mb-6 flex justify-between items-center">
                     <button
@@ -71,7 +74,7 @@ export default function PrintLivePage() {
                 </div>
 
                 {/* Header */}
-                <div className="border-2 border-gray-900 p-4 mb-6">
+                <div className="print-header border-2 border-gray-900 p-4 mb-6">
                     <div className="flex justify-between items-start">
                         <div>
                             <h1 className="text-2xl font-bold uppercase tracking-wider">Ficha de Corte</h1>
@@ -104,14 +107,14 @@ export default function PrintLivePage() {
                     }, {} as Record<string, typeof materialBars[0] & { groupQuantity: number }>);
 
                     return (
-                        <div key={material} className={matIdx > 0 ? 'page-break' : ''}>
-                            <h2 className="text-xl font-bold uppercase bg-gray-900 text-white px-4 py-2 mb-4 tracking-wider">
+                        <div key={material}>
+                            <h2 className="material-title text-xl font-bold uppercase bg-gray-900 text-white px-4 py-2 mb-4 tracking-wider">
                                 {material}
                             </h2>
 
                             <div className="space-y-5">
                                 {Object.values(groupedBars).map((bar, barIdx) => (
-                                    <div key={bar.id} className="border border-gray-300 rounded p-4 relative">
+                                    <div key={bar.id} className="bar-card border border-gray-300 rounded p-4 relative">
                                         {/* Grouping Indicator */}
                                         {bar.groupQuantity > 1 && (
                                             <div className="absolute -top-3 -left-3 bg-[var(--color-accent)] text-white font-bold px-3 py-1 rounded shadow-md text-sm border-2 border-white transform rotate-[-5deg]">
