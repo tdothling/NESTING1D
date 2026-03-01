@@ -7,7 +7,18 @@
   --color-bg: #E4E3E0;
   --color-ink: #141414;
   --color-line: #141414;
-  --color-accent: #F27D26;
+  --color-accent: #f9411d; /* Reddish orange for dangerous/cutting actions */
+  
+  --radius-xs: 0px;
+  --radius-sm: 0px;
+  --radius-md: 0px;
+  --radius-lg: 0px;
+  --radius-xl: 0px;
+  --radius-2xl: 0px;
+  --shadow-sm: none;
+  --shadow-md: none;
+  --shadow-lg: 4px 4px 0px 0px var(--color-ink);
+  --shadow-xl: 8px 8px 0px 0px var(--color-ink);
 }
 
 body {
