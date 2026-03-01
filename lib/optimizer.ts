@@ -150,10 +150,19 @@ export function optimizeCuts(
 
       for (let i = 0; i < openBins.length; i++) {
         const bin = openBins[i];
-        const needed = item.length + (bin.cuts.length > 0 ? options.kerf : 0);
+        const kerf = bin.cuts.length > 0 ? options.kerf : 0;
+        const neededStrict = item.length + kerf;
 
-        if (bin.remainingLength >= needed) {
-          const potentialRemaining = bin.remainingLength - needed;
+        // Tolerância de encaixe perfeito: 
+        // Se o que sobra na barra for exatamente o tamanho da peça (ex: 4000 corte, sobra 2000. Peça é 2000), 
+        // a gente deixa encaixar ignorando o disco de corte (considera que a barra real na fábrica sempre vem com margem).
+        const canFit = bin.remainingLength >= neededStrict || (bin.remainingLength >= item.length && bin.remainingLength < neededStrict);
+
+        if (canFit) {
+          // Calculate potential remaining. If it was a forced perfect fit, remaining becomes 0.
+          const actualNeeded = bin.remainingLength >= neededStrict ? neededStrict : bin.remainingLength;
+          const potentialRemaining = bin.remainingLength - actualNeeded;
+
           if (potentialRemaining < minRemaining) {
             minRemaining = potentialRemaining;
             bestBinIndex = i;
@@ -163,9 +172,12 @@ export function optimizeCuts(
 
       if (bestBinIndex !== -1) {
         const bin = openBins[bestBinIndex];
-        const needed = item.length + (bin.cuts.length > 0 ? options.kerf : 0);
+        const kerf = bin.cuts.length > 0 ? options.kerf : 0;
+        const neededStrict = item.length + kerf;
+        const actualNeeded = bin.remainingLength >= neededStrict ? neededStrict : bin.remainingLength;
+
         bin.cuts.push({ length: item.length, description: item.description });
-        bin.remainingLength -= needed;
+        bin.remainingLength -= actualNeeded;
         placed = true;
       } else {
         // 2. Open a new bin using the consumeBar helper
