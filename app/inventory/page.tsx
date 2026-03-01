@@ -1,15 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { getStock, saveStock, deleteStockItem } from '@/lib/store';
 import { StockItem } from '@/lib/types';
-import { Plus, Trash2, Save } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function InventoryPage() {
   const [stock, setStock] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [sortConfig, setSortConfig] = useState<{ key: keyof StockItem; direction: 'asc' | 'desc' } | null>(null);
 
   useEffect(() => {
     const loadStock = async () => {
@@ -55,6 +56,41 @@ export default function InventoryPage() {
       )
     );
   };
+
+  const requestSort = (key: keyof StockItem) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
+
+  const sortedStock = useMemo(() => {
+    let sortableItems = [...stock];
+    if (sortConfig !== null) {
+      sortableItems.sort((a, b) => {
+        let aValue = a[sortConfig.key];
+        let bValue = b[sortConfig.key];
+
+        if (aValue == null) aValue = '';
+        if (bValue == null) bValue = '';
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
+        return 0;
+      });
+    }
+    return sortableItems;
+  }, [stock, sortConfig]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-screen bg-[var(--color-bg)]">
@@ -102,16 +138,31 @@ export default function InventoryPage() {
 
           {/* Table Section */}
           <div className="border-4 border-[var(--color-ink)] bg-white">
-            <div className="overflow-x-auto">
+            <div className="overflow-x-auto pb-4">
               <table className="min-w-full divide-y divide-none">
                 <thead className="bg-[var(--color-ink)] text-[var(--color-bg)]">
                   <tr>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20">Material</th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20">Comprimento <span className="opacity-50">(mm)</span></th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20">Volume</th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20">R$/metro</th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20">Classificação</th>
-                    <th scope="col" className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest font-mono">CMD</th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[30%] min-w-[250px]" onClick={() => requestSort('material')}>
+                      Material
+                      {sortConfig?.key === 'material' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('length')}>
+                      Comp. <span className="opacity-50">(mm)</span>
+                      {sortConfig?.key === 'length' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('quantity')}>
+                      Volume
+                      {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('pricePerMeter')}>
+                      R$/metro
+                      {sortConfig?.key === 'pricePerMeter' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[20%] min-w-[180px]" onClick={() => requestSort('isScrap')}>
+                      Classificação
+                      {sortConfig?.key === 'isScrap' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest font-mono w-[5%] min-w-[80px]">CMD</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y-4 divide-[var(--color-ink)] divide-opacity-10">
@@ -125,7 +176,7 @@ export default function InventoryPage() {
                       </td>
                     </tr>
                   ) : (
-                    stock.map((item) => (
+                    sortedStock.map((item) => (
                       <tr key={item.id} className="hover:bg-[var(--color-bg)] transition-colors group">
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <input
