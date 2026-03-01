@@ -24,9 +24,14 @@ export default function RootLayout({
 }) {
   return (
     <html lang="pt-BR" className={`${inter.variable} ${jetbrainsMono.variable}`}>
-      <body className="antialiased min-h-screen flex flex-col">
+      <body className="antialiased min-h-screen flex flex-col selection:bg-[var(--color-ink)] selection:text-[var(--color-bg)] text-[var(--color-ink)] bg-[var(--color-bg)]">
         {children}
-        <Toaster position="bottom-right" theme="dark" />
+        <Toaster
+          position="bottom-right"
+          toastOptions={{
+            className: 'border-4 border-[var(--color-ink)] bg-white rounded-none shadow-[8px_8px_0px_0px_var(--color-ink)] font-mono text-[var(--color-ink)] font-bold uppercase tracking-widest',
+          }}
+        />
       </body>
     </html>
   );

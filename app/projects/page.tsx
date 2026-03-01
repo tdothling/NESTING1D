@@ -50,42 +50,60 @@ export default function ProjectsPage() {
     );
 
     return (
-        <div className="min-h-screen bg-[var(--color-bg)]">
+        <div className="min-h-screen bg-[var(--color-bg)] selection:bg-[var(--color-ink)] selection:text-[var(--color-bg)]">
             <Navbar />
 
-            <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-                <div className="px-4 py-6 sm:px-0">
-                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                        <h1 className="text-2xl font-bold text-[var(--color-ink)] font-mono">
-                            Meus Projetos Salvos
-                        </h1>
+            <main className="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+                <div className="space-y-8">
+                    {/* Header Section */}
+                    <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-[var(--color-ink)] pb-6 gap-4">
+                        <div className="flex items-center space-x-4">
+                            <div className="w-3 h-10 bg-[var(--color-ink)]"></div>
+                            <div>
+                                <h1 className="text-3xl font-black text-[var(--color-ink)] font-mono uppercase tracking-widest">
+                                    Projetos
+                                </h1>
+                                <p className="font-mono text-sm opacity-70 uppercase tracking-widest mt-1">Histórico de Otimizações</p>
+                            </div>
+                        </div>
 
-                        <div className="relative w-full sm:w-64">
+                        <div className="relative w-full sm:w-80 border-2 border-[var(--color-ink)] bg-white group focus-within:border-[var(--color-accent)] transition-colors">
                             <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                <Search className="h-4 w-4 text-gray-400" />
+                                <Search className="h-5 w-5 text-[var(--color-ink)] group-focus-within:text-[var(--color-accent)] transition-colors" />
                             </div>
                             <input
                                 type="text"
-                                className="block w-full pl-10 pr-3 py-2 border border-gray-300 rounded-md leading-5 bg-white placeholder-gray-500 focus:outline-none focus:placeholder-gray-400 focus:ring-1 focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                                placeholder="Buscar projeto..."
+                                className="block w-full pl-10 pr-3 py-3 bg-transparent border-none focus:outline-none focus:ring-0 font-mono font-bold uppercase placeholder-[var(--color-ink)] placeholder-opacity-50 text-[var(--color-ink)]"
+                                placeholder="BUSCAR PROJETO..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
                             />
                         </div>
                     </div>
 
-                    <div className="bg-white shadow overflow-hidden border border-[var(--color-line)] sm:rounded-lg">
+                    <div className="border-4 border-[var(--color-ink)] bg-white shadow-[8px_8px_0px_0px_var(--color-ink)]">
                         {loading ? (
-                            <div className="p-8 text-center text-gray-500 font-mono">Carregando projetos...</div>
+                            <div className="p-16 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
+                                <span className="font-mono font-black text-xl uppercase tracking-widest animate-pulse text-[var(--color-ink)]">CARREGANDO PROJETOS...</span>
+                            </div>
                         ) : filteredProjects.length === 0 ? (
-                            <div className="p-12 text-center">
-                                <p className="text-gray-500 text-lg">Nenhum projeto encontrado.</p>
-                                <Link href="/optimize" className="mt-4 inline-flex items-center text-[var(--color-accent)] hover:text-orange-600 font-medium">
-                                    Criar um novo projeto →
-                                </Link>
+                            <div className="p-16 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
+                                <div className="flex flex-col items-center justify-center opacity-60">
+                                    <span className="font-mono font-black text-2xl uppercase tracking-widest mb-2 text-[var(--color-ink)]">NENHUM PROJETO</span>
+                                    {searchTerm ? (
+                                        <span className="font-mono text-sm font-bold uppercase tracking-widest max-w-md text-[var(--color-ink)]">A BUSCA NÃO RETORNOU RESULTADOS.</span>
+                                    ) : (
+                                        <>
+                                            <span className="font-mono text-sm font-bold uppercase tracking-widest max-w-md text-[var(--color-ink)] mb-6">NÃO HÁ PROJETOS REGISTRADOS NO SISTEMA.</span>
+                                            <Link href="/optimize" className="inline-flex items-center justify-center px-6 py-3 border-2 border-[var(--color-ink)] text-sm font-black uppercase tracking-widest text-[var(--color-bg)] bg-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:border-[var(--color-accent)] hover:text-white transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]">
+                                                CRIAR NOVO PROJETO
+                                            </Link>
+                                        </>
+                                    )}
+                                </div>
                             </div>
                         ) : (
-                            <ul className="divide-y divide-gray-200">
+                            <ul className="divide-y-4 divide-[var(--color-ink)]">
                                 {filteredProjects.map((project) => {
                                     const hasResult = !!project.result;
                                     const totalBars = hasResult ? project.result?.totalStockUsed : 0;
@@ -94,66 +112,72 @@ export default function ProjectsPage() {
                                     });
 
                                     return (
-                                        <li key={project.id}>
-                                            <div className="block hover:bg-gray-50 transition-colors">
-                                                <div className="px-4 py-4 sm:px-6 flex items-center justify-between">
-                                                    <div className="flex-1 min-w-0 pr-4">
-                                                        <div className="flex items-center justify-between">
-                                                            <p className="text-lg font-medium text-indigo-600 truncate">
-                                                                {project.name || 'Projeto sem nome'}
-                                                            </p>
-                                                            <div className="ml-2 flex-shrink-0 flex">
-                                                                <p className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${hasResult ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}`}>
-                                                                    {hasResult ? 'Otimizado' : 'Rascunho'}
-                                                                </p>
-                                                            </div>
-                                                        </div>
-                                                        <div className="mt-2 sm:flex sm:justify-between">
-                                                            <div className="sm:flex">
-                                                                <p className="flex items-center text-sm text-gray-500">
-                                                                    {project.requests?.length || 0} peças solicitadas
-                                                                </p>
-                                                                {hasResult && (
-                                                                    <p className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0 sm:ml-6">
-                                                                        {totalBars} barras de estoque utilizadas
-                                                                    </p>
-                                                                )}
-                                                            </div>
-                                                            <div className="mt-2 flex items-center text-sm text-gray-500 sm:mt-0">
-                                                                <p>Criado em: {dateFormated}</p>
-                                                            </div>
-                                                        </div>
+                                        <li key={project.id} className="group flex flex-col sm:flex-row relative hover:bg-[var(--color-bg)] transition-colors">
+                                            {/* Status Indicator Bar */}
+                                            <div className={`absolute left-0 top-0 bottom-0 w-2 ${hasResult ? 'bg-[var(--color-ink)]' : 'bg-amber-400'}`}></div>
+
+                                            <div className="flex-1 p-6 pl-8">
+                                                <div className="flex items-start justify-between mb-4">
+                                                    <div>
+                                                        <Link href={`/optimize?id=${project.id}`} className="hover:text-[var(--color-accent)] transition-colors inline-block">
+                                                            <h3 className="text-xl font-black text-[var(--color-ink)] uppercase tracking-widest mb-1 underline decoration-2 underline-offset-4 decoration-transparent hover:decoration-[var(--color-accent)] transition-all">
+                                                                {project.name || 'PROJETO SEM NOME'}
+                                                            </h3>
+                                                        </Link>
+                                                        <p className="font-mono text-xs font-bold uppercase tracking-widest opacity-60 flex items-center">
+                                                            <span>CRIADO EM {dateFormated}</span>
+                                                        </p>
                                                     </div>
 
-                                                    {/* Actions */}
-                                                    <div className="flex gap-2">
-                                                        {hasResult && (
-                                                            <Link
-                                                                href={`/print/${project.id}`}
-                                                                target="_blank"
-                                                                onClick={(e) => e.stopPropagation()}
-                                                                className="p-2 text-gray-400 hover:text-gray-900 bg-white rounded-md border border-gray-300 hover:bg-gray-50 transition-colors"
-                                                                title="Imprimir Ficha de Corte"
-                                                            >
-                                                                <Printer className="w-5 h-5" />
-                                                            </Link>
-                                                        )}
-                                                        <Link
-                                                            href={`/optimize?id=${project.id}`}
-                                                            className="p-2 text-indigo-500 hover:text-indigo-900 bg-indigo-50 rounded-md border border-indigo-200 hover:bg-indigo-100 transition-colors"
-                                                            title="Abrir Projeto"
-                                                        >
-                                                            <ExternalLink className="w-5 h-5" />
-                                                        </Link>
-                                                        <button
-                                                            onClick={(e) => handleDelete(project.id, e)}
-                                                            className="p-2 text-red-500 hover:text-red-900 bg-red-50 rounded-md border border-red-200 hover:bg-red-100 transition-colors"
-                                                            title="Excluir Projeto"
-                                                        >
-                                                            <Trash2 className="w-5 h-5" />
-                                                        </button>
+                                                    <div className="hidden sm:block">
+                                                        <span className={`px-3 py-1 text-[10px] font-black uppercase tracking-widest border-2 ${hasResult ? 'border-[var(--color-ink)] text-[var(--color-ink)] bg-transparent' : 'border-amber-500 text-amber-600 bg-amber-50'}`}>
+                                                            {hasResult ? 'OTIMIZADO' : 'RASCUNHO'}
+                                                        </span>
                                                     </div>
                                                 </div>
+
+                                                <div className="grid grid-cols-2 gap-4 font-mono text-sm max-w-md">
+                                                    <div className="bg-white border-2 border-[var(--color-ink)] border-opacity-20 p-2">
+                                                        <span className="block text-[10px] font-black text-[var(--color-ink)] uppercase tracking-widest opacity-50 mb-1">PEÇAS SOLICITADAS</span>
+                                                        <span className="font-black text-lg text-[var(--color-ink)]">{project.requests?.length || 0}</span>
+                                                    </div>
+
+                                                    <div className={`bg-white border-2 border-[var(--color-ink)] border-opacity-20 p-2 ${!hasResult && 'opacity-30'}`}>
+                                                        <span className="block text-[10px] font-black text-[var(--color-ink)] uppercase tracking-widest opacity-50 mb-1">BARRAS UTILIZADAS</span>
+                                                        <span className="font-black text-lg text-[var(--color-ink)]">{hasResult ? totalBars : '-'}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Actions Panel */}
+                                            <div className="flex sm:flex-col border-t-2 sm:border-t-0 sm:border-l-2 border-dashed border-[var(--color-ink)] border-opacity-30 bg-white">
+                                                {hasResult && (
+                                                    <Link
+                                                        href={`/print/${project.id}`}
+                                                        target="_blank"
+                                                        onClick={(e) => e.stopPropagation()}
+                                                        className="flex-1 sm:flex-none flex justify-center items-center p-4 sm:p-5 text-[var(--color-ink)] hover:text-white hover:bg-[var(--color-ink)] transition-colors border-r-2 sm:border-r-0 border-dashed border-[var(--color-ink)] border-opacity-30"
+                                                        title="IMPRIMIR FICHA DE CORTE"
+                                                    >
+                                                        <Printer className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                    </Link>
+                                                )}
+
+                                                <Link
+                                                    href={`/optimize?id=${project.id}`}
+                                                    className="flex-1 sm:flex-none flex justify-center items-center p-4 sm:p-5 text-[var(--color-ink)] hover:text-white hover:bg-[var(--color-accent)] transition-colors border-r-2 sm:border-r-0 sm:border-t-2 border-dashed border-[var(--color-ink)] border-opacity-30"
+                                                    title="ABRIR PROJETO"
+                                                >
+                                                    <ExternalLink className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                </Link>
+
+                                                <button
+                                                    onClick={(e) => handleDelete(project.id, e)}
+                                                    className="flex-1 sm:flex-none flex justify-center items-center p-4 sm:p-5 text-red-600 hover:text-white hover:bg-red-600 transition-colors sm:border-t-2 border-dashed border-red-600 border-opacity-30"
+                                                    title="EXCLUIR PROJETO"
+                                                >
+                                                    <Trash2 className="w-5 h-5 sm:w-6 sm:h-6" />
+                                                </button>
                                             </div>
                                         </li>
                                     );

@@ -312,73 +312,89 @@ function OptimizeContent() {
         <div className="px-4 py-6 sm:px-0">
 
           {/* Progress Steps */}
-          <div className="mb-8">
-            <div className="flex items-center justify-center space-x-4 font-mono text-sm">
-              <div className={`flex items-center ${step === 'upload' ? 'text-[var(--color-accent)] font-bold' : 'text-gray-500'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center mr-2">1</span>
-                Upload
+          <div className="mb-8 border-4 border-[var(--color-ink)] bg-white p-4 shadow-[8px_8px_0px_0px_var(--color-ink)]">
+            <div className="flex items-center justify-between font-mono text-sm font-black uppercase tracking-widest relative">
+
+              {/* Progress Line */}
+              <div className="absolute top-1/2 left-0 right-0 h-1 bg-[var(--color-bg)] -z-10 transform -translate-y-1/2"></div>
+
+              {/* Step 1 */}
+              <div className={`flex flex-col items-center bg-white px-4 py-2 border-2 ${step === 'upload' ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-[var(--color-ink)] text-[var(--color-ink)]'} transition-colors relative`}>
+                <span className={`text-2xl mb-1 ${step === 'upload' ? 'text-[var(--color-accent)]' : 'opacity-50'}`}>01</span>
+                <span>UPLOAD</span>
+                {step === 'upload' && <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-[var(--color-accent)]"></div>}
               </div>
-              <div className="w-8 h-px bg-gray-300"></div>
-              <div className={`flex items-center ${step === 'review' ? 'text-[var(--color-accent)] font-bold' : 'text-gray-500'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center mr-2">2</span>
-                Revisão
+
+              <div className={`h-1 flex-1 mx-2 overflow-hidden border-y-2 border-dashed ${step === 'review' || step === 'results' ? 'border-[var(--color-ink)]' : 'border-[var(--color-ink)] opacity-30'}`}></div>
+
+              {/* Step 2 */}
+              <div className={`flex flex-col items-center bg-white px-4 py-2 border-2 ${step === 'review' ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : (step === 'results' ? 'border-[var(--color-ink)] text-[var(--color-ink)]' : 'border-[var(--color-ink)] text-[var(--color-ink)] opacity-50')} transition-colors relative`}>
+                <span className={`text-2xl mb-1 ${(step === 'review' || step === 'results') ? 'text-inherit' : 'opacity-50'}`}>02</span>
+                <span>REVISÃO</span>
+                {step === 'review' && <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-[var(--color-accent)]"></div>}
               </div>
-              <div className="w-8 h-px bg-gray-300"></div>
-              <div className={`flex items-center ${step === 'results' ? 'text-[var(--color-accent)] font-bold' : 'text-gray-500'}`}>
-                <span className="w-6 h-6 rounded-full border border-current flex items-center justify-center mr-2">3</span>
-                Resultados
+
+              <div className={`h-1 flex-1 mx-2 overflow-hidden border-y-2 border-dashed ${step === 'results' ? 'border-[var(--color-ink)]' : 'border-[var(--color-ink)] opacity-30'}`}></div>
+
+              {/* Step 3 */}
+              <div className={`flex flex-col items-center bg-white px-4 py-2 border-2 ${step === 'results' ? 'border-[var(--color-accent)] text-[var(--color-accent)]' : 'border-[var(--color-ink)] text-[var(--color-ink)] opacity-50'} transition-colors relative`}>
+                <span className={`text-2xl mb-1 ${step === 'results' ? 'text-inherit' : 'opacity-50'}`}>03</span>
+                <span>RESULTADOS</span>
+                {step === 'results' && <div className="absolute -bottom-2 -right-2 w-3 h-3 bg-[var(--color-accent)]"></div>}
               </div>
             </div>
           </div>
 
-          {step === 'upload' && (
-            <StepUploader
-              onDrop={handleDrop}
-              onSpreadsheet={handleSpreadsheet}
-              loading={loading}
-              onManualEntry={() => {
-                setRequests([]);
-                setStep('review');
-              }}
-            />
-          )}
+          <div className="mt-8">
+            {step === 'upload' && (
+              <StepUploader
+                onDrop={handleDrop}
+                onSpreadsheet={handleSpreadsheet}
+                loading={loading}
+                onManualEntry={() => {
+                  setRequests([]);
+                  setStep('review');
+                }}
+              />
+            )}
 
-          {step === 'review' && (
-            <StepReview
-              requests={requests}
-              globalMultiplier={globalMultiplier}
-              setGlobalMultiplier={setGlobalMultiplier}
-              applyMultiplier={applyMultiplier}
-              updateRequest={updateRequest}
-              addRequest={addRequest}
-              removeRequest={removeRequest}
-              uniqueMaterials={uniqueMaterials}
-              standardBarLengths={standardBarLengths}
-              setStandardBarLengths={setStandardBarLengths}
-              maxScrapLength={maxScrapLength}
-              setMaxScrapLength={setMaxScrapLength}
-              onBack={() => setStep('upload')}
-              onOptimize={handleOptimize}
-              loading={loading}
-            />
-          )}
+            {step === 'review' && (
+              <StepReview
+                requests={requests}
+                globalMultiplier={globalMultiplier}
+                setGlobalMultiplier={setGlobalMultiplier}
+                applyMultiplier={applyMultiplier}
+                updateRequest={updateRequest}
+                addRequest={addRequest}
+                removeRequest={removeRequest}
+                uniqueMaterials={uniqueMaterials}
+                standardBarLengths={standardBarLengths}
+                setStandardBarLengths={setStandardBarLengths}
+                maxScrapLength={maxScrapLength}
+                setMaxScrapLength={setMaxScrapLength}
+                onBack={() => setStep('upload')}
+                onOptimize={handleOptimize}
+                loading={loading}
+              />
+            )}
 
-          {step === 'results' && result && (
-            <StepResults
-              result={result}
-              projectName={projectName}
-              projectId={projectId}
-              setProjectName={setProjectName}
-              autoUpdateStock={autoUpdateStock}
-              setAutoUpdateStock={setAutoUpdateStock}
-              stock={stock}
-              onBack={() => setStep('review')}
-              onSave={handleSaveProject}
-              onDownloadPDF={handleDownloadPDF}
-              onWhatsApp={handleSendWhatsApp}
-              loading={loading}
-            />
-          )}
+            {step === 'results' && result && (
+              <StepResults
+                result={result}
+                projectName={projectName}
+                projectId={projectId}
+                setProjectName={setProjectName}
+                autoUpdateStock={autoUpdateStock}
+                setAutoUpdateStock={setAutoUpdateStock}
+                stock={stock}
+                onBack={() => setStep('review')}
+                onSave={handleSaveProject}
+                onDownloadPDF={handleDownloadPDF}
+                onWhatsApp={handleSendWhatsApp}
+                loading={loading}
+              />
+            )}
+          </div>
 
         </div>
       </main>

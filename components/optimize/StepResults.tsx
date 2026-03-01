@@ -45,97 +45,117 @@ export function StepResults({
         : 0;
 
     return (
-        <div className="space-y-6">
+        <div className="space-y-8 font-mono max-w-7xl mx-auto">
+            {/* Header section */}
+            <div className="mb-6 border-l-8 border-[var(--color-ink)] pl-4">
+                <h2 className="text-3xl font-black uppercase tracking-widest text-[var(--color-ink)] block">
+                    RELATÓRIO DE OTIMIZAÇÃO
+                </h2>
+                <p className="text-sm font-bold opacity-60 uppercase tracking-widest mt-1">
+                    RESULTADOS DO PROCESSAMENTO DE CORTE
+                </p>
+            </div>
+
             {/* Summary */}
-            <div className="bg-white shadow rounded-lg border border-[var(--color-line)] p-6">
-                <h2 className="text-lg font-medium text-gray-900 font-mono mb-4">Resumo da Otimização</h2>
-                <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-5">
-                    <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                        <dt className="text-sm font-medium text-gray-500 truncate">Total de Barras</dt>
-                        <dd className="mt-1 text-3xl font-semibold text-gray-900">{result.totalStockUsed}</dd>
+            <div className="bg-white border-4 border-[var(--color-ink)] p-6 shadow-[8px_8px_0px_0px_var(--color-ink)]">
+                <h2 className="text-lg font-black text-[var(--color-ink)] uppercase tracking-widest mb-6 border-b-2 border-[var(--color-ink)] pb-2">MÉTRICAS GERAIS</h2>
+                <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-5">
+                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
+                        <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">TOTAL DE BARRAS</dt>
+                        <dd className="text-4xl font-black text-[var(--color-ink)]">{result.totalStockUsed}</dd>
                     </div>
-                    <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                        <dt className="text-sm font-medium text-gray-500 truncate">Sucata (Perda Real)</dt>
-                        <dd className="mt-1 text-3xl font-semibold text-red-600">
-                            {(result.totalTrueWaste / 1000).toFixed(2)} <span className="text-xl">m</span>
+                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
+                        <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">SUCATA (PERDA REAL)</dt>
+                        <dd className="text-4xl font-black text-[#f9411d]">
+                            {(result.totalTrueWaste / 1000).toFixed(2)} <span className="text-xl">M</span>
                             {result.totalTrueWasteKg > 0 && (
-                                <span className="block text-sm text-red-500 font-normal">~ {result.totalTrueWasteKg} Kg</span>
+                                <span className="block text-sm font-bold text-[#f9411d] opacity-80 mt-1">~ {result.totalTrueWasteKg} KG</span>
                             )}
                         </dd>
                     </div>
-                    <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                        <dt className="text-sm font-medium text-gray-500 truncate">Retalho Aproveitável</dt>
-                        <dd className="mt-1 text-3xl font-semibold text-amber-600">
-                            {(result.totalReusableScrap / 1000).toFixed(2)} <span className="text-xl">m</span>
+                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
+                        <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">RETALHO APROVEITÁVEL</dt>
+                        <dd className="text-4xl font-black text-amber-600">
+                            {(result.totalReusableScrap / 1000).toFixed(2)} <span className="text-xl">M</span>
                         </dd>
                     </div>
-                    <div className="bg-gray-50 overflow-hidden rounded-lg p-4 border border-gray-200">
-                        <dt className="text-sm font-medium text-gray-500 truncate">Aproveitamento</dt>
-                        <dd className="mt-1 text-3xl font-semibold text-green-600">
+                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
+                        <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">APROVEITAMENTO</dt>
+                        <dd className="text-4xl font-black text-emerald-600">
                             {Math.round((1 - (result.totalTrueWaste / (result.bars.reduce((acc, b) => acc + b.length, 0) || 1))) * 100)}%
                         </dd>
                     </div>
                     {estimatedCost > 0 && (
-                        <div className="bg-green-50 overflow-hidden rounded-lg p-4 border border-green-200">
-                            <dt className="text-sm font-medium text-green-700 truncate flex items-center">
-                                <DollarSign className="h-4 w-4 mr-1" /> Custo Estimado
+                        <div className="bg-emerald-50 p-4 border-2 border-emerald-600 relative overflow-hidden">
+                            <div className="absolute -right-4 -bottom-4 opacity-10">
+                                <DollarSign className="w-24 h-24" />
+                            </div>
+                            <dt className="text-xs font-black text-emerald-800 uppercase tracking-widest mb-2 flex items-center">
+                                <span className="w-2 h-2 bg-emerald-600 inline-block mr-2"></span> CUSTO ESTIMADO
                             </dt>
-                            <dd className="mt-1 text-2xl font-semibold text-green-700">
+                            <dd className="text-3xl font-black text-emerald-700 relative z-10">
                                 R$ {estimatedCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                             </dd>
-                            <span className="text-xs text-green-600">Somente barras novas</span>
+                            <span className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mt-1 block relative z-10">*SOMENTE BARRAS NOVAS</span>
                         </div>
                     )}
                 </div>
             </div>
 
             {/* Purchase List */}
-            <div className="bg-white shadow rounded-lg border border-[var(--color-line)] overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-indigo-50 border-b border-[var(--color-line)] flex items-center">
-                    <ShoppingCart className="h-5 w-5 text-indigo-600 mr-2" />
-                    <h3 className="text-lg leading-6 font-medium text-indigo-900 font-mono">Lista de Compra</h3>
+            <div className="bg-white border-4 border-[var(--color-ink)] shadow-[8px_8px_0px_0px_var(--color-ink)] relative overflow-hidden">
+                <div className="px-6 py-4 flex justify-between items-center bg-[var(--color-ink)] text-white border-b-4 border-[var(--color-ink)]">
+                    <div className="flex items-center">
+                        <ShoppingCart className="h-5 w-5 mr-3" />
+                        <h3 className="text-lg font-black uppercase tracking-widest">LISTA DE COMPRA</h3>
+                    </div>
                 </div>
-                <div className="p-6">
+
+                <div className="p-0">
                     {result.purchaseList && result.purchaseList.length > 0 ? (
                         <div className="overflow-x-auto">
-                            <table className="min-w-full divide-y divide-gray-200">
-                                <thead className="bg-gray-50">
+                            <table className="min-w-full divide-y-2 divide-[var(--color-ink)]">
+                                <thead className="bg-[var(--color-bg)] border-b-2 border-[var(--color-ink)]">
                                     <tr>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Material</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Comprimento (mm)</th>
-                                        <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider font-mono">Quantidade</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)]">MATERIAL</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)]">COMPRIMENTO (MM)</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest">QUANTIDADE</th>
                                     </tr>
                                 </thead>
-                                <tbody className="bg-white divide-y divide-gray-200">
+                                <tbody className="bg-white divide-y-2 divide-[var(--color-ink)]">
                                     {result.purchaseList.map((item, idx) => (
-                                        <tr key={idx}>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{item.material}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{item.length}</td>
-                                            <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-bold">{item.quantity}</td>
+                                        <tr key={idx} className="hover:bg-[var(--color-bg)] transition-colors">
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[var(--color-ink)] uppercase border-r-2 border-[var(--color-ink)]">{item.material}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-[var(--color-ink)] border-r-2 border-[var(--color-ink)]">{item.length}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-lg font-black text-[var(--color-accent)]">{item.quantity}</td>
                                         </tr>
                                     ))}
                                 </tbody>
                             </table>
                         </div>
                     ) : (
-                        <p className="text-sm text-gray-500 mb-4">Nenhuma compra necessária. Todo o material foi retirado do estoque.</p>
+                        <div className="p-8 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
+                            <p className="text-sm font-black text-[var(--color-ink)] uppercase tracking-widest opacity-60">
+                                NENHUMA COMPRA NECESSÁRIA. MATERIAL RETIRADO DO ESTOQUE.
+                            </p>
+                        </div>
                     )}
 
-                    <div className="mt-4 flex flex-wrap gap-3">
+                    <div className="p-6 bg-white flex flex-wrap gap-4 border-t-2 border-[var(--color-ink)]">
                         <button
                             onClick={onDownloadPDF}
-                            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                            className="inline-flex items-center px-6 py-3 border-2 border-[var(--color-ink)] text-xs font-black uppercase tracking-widest text-[var(--color-ink)] bg-white hover:bg-[var(--color-ink)] hover:text-white transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]"
                         >
                             <Download className="h-4 w-4 mr-2" />
-                            Baixar PDF
+                            BAIXAR PDF
                         </button>
                         {projectId && (
                             <button
                                 onClick={onWhatsApp}
-                                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-[#25D366] hover:bg-[#128C7E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#25D366]"
+                                className="inline-flex items-center px-6 py-3 border-2 border-[#25D366] text-xs font-black uppercase tracking-widest text-white bg-[#25D366] hover:bg-white hover:text-[#25D366] transition-all active:scale-95 shadow-[4px_4px_0px_0px_#25D366] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]"
                             >
                                 <MessageCircle className="h-4 w-4 mr-2" />
-                                Enviar por WhatsApp
+                                WHATSAPP
                             </button>
                         )}
                         <button
@@ -150,24 +170,25 @@ export function StepResults({
                                 sessionStorage.setItem('nesting1d_print_data', JSON.stringify(printData));
                                 window.open('/print/live', '_blank');
                             }}
-                            className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-500"
+                            className="inline-flex items-center px-6 py-3 border-2 border-[var(--color-ink)] text-xs font-black uppercase tracking-widest text-[var(--color-bg)] bg-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:border-[var(--color-accent)] hover:text-white transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]"
                         >
                             <Printer className="h-4 w-4 mr-2" />
-                            Ficha de Corte
+                            FICHA DE CORTE
                         </button>
                     </div>
                 </div>
             </div>
 
             {/* Cut Plan Visualization */}
-            <div className="bg-white shadow rounded-lg border border-[var(--color-line)] overflow-hidden">
-                <div className="px-4 py-5 sm:px-6 bg-gray-50 border-b border-[var(--color-line)] flex items-center justify-between">
-                    <h3 className="text-lg leading-6 font-medium text-gray-900 font-mono">Plano de Corte Detalhado</h3>
-                    <span className="bg-indigo-100 text-indigo-800 text-xs font-medium px-2.5 py-0.5 rounded border border-indigo-200">
-                        Vista Agrupada
+            <div className="bg-white border-4 border-[var(--color-ink)] shadow-[8px_8px_0px_0px_var(--color-ink)] overflow-hidden">
+                <div className="px-6 py-4 bg-[var(--color-bg)] border-b-4 border-[var(--color-ink)] flex items-center justify-between">
+                    <h3 className="text-lg font-black text-[var(--color-ink)] uppercase tracking-widest">PLANO DE CORTE DETALHADO</h3>
+                    <span className="bg-[var(--color-ink)] text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 border border-white">
+                        VISTA AGRUPADA
                     </span>
                 </div>
-                <div className="p-6 space-y-8">
+
+                <div className="p-6 space-y-10">
                     {(() => {
                         // Group identical bars
                         const groupedBars = result.bars.reduce((acc, bar) => {
@@ -181,60 +202,77 @@ export function StepResults({
                         }, {} as Record<string, typeof result.bars[0] & { groupQuantity: number, originalIndices: number[] }>);
 
                         return Object.values(groupedBars).map((bar, index) => (
-                            <div key={bar.id} className="space-y-2 relative">
-                                <div className="flex justify-between items-center text-sm text-gray-500 font-mono">
+                            <div key={bar.id} className="space-y-3 relative">
+                                <div className="flex flex-wrap justify-between items-center text-xs font-bold font-mono border-b-2 border-dashed border-[var(--color-ink)] pb-2 gap-2">
                                     <div className="flex items-center gap-3">
                                         {bar.groupQuantity > 1 && (
-                                            <span className="flex items-center justify-center bg-[var(--color-accent)] text-white font-bold px-2 py-1 rounded text-xs shadow-sm">
-                                                Qtd: {bar.groupQuantity}x
+                                            <span className="flex items-center justify-center bg-[var(--color-accent)] text-white font-black px-2 py-1 text-xs border border-[var(--color-ink)]">
+                                                {bar.groupQuantity}X
                                             </span>
                                         )}
-                                        <span className="font-bold text-gray-900 text-base">{bar.material}</span>
-                                        <span>Barra de {bar.length}mm {bar.isScrapUsed ? '(Retalho)' : '(Nova)'}</span>
+                                        <span className="font-black text-[var(--color-ink)] text-sm uppercase">{bar.material}</span>
+                                        <span className="bg-[var(--color-bg)] px-2 py-1 border border-[var(--color-ink)]">
+                                            BARRA {bar.length}MM {bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
+                                        </span>
                                     </div>
 
-                                    <span>
+                                    <div className="flex gap-2">
                                         {bar.reusableScrap > 0 ? (
-                                            <span className="text-amber-600 font-semibold mr-3">Sobra: {bar.reusableScrap}mm</span>
+                                            <span className="bg-amber-100 text-amber-800 border-2 border-amber-800 px-2 py-1 uppercase tracking-widest">SOBRA: {bar.reusableScrap}MM</span>
                                         ) : null}
                                         {bar.trueWaste > 0 ? (
-                                            <span className="text-red-500 font-semibold mr-3">
-                                                Sucata: {bar.trueWaste}mm {bar.trueWasteKg > 0 ? `(${bar.trueWasteKg} Kg)` : ''}
+                                            <span className="bg-red-100 text-red-800 border-2 border-red-800 px-2 py-1 uppercase tracking-widest flex items-center gap-1">
+                                                SUCATA: {bar.trueWaste}MM {bar.trueWasteKg > 0 ? `(${bar.trueWasteKg} KG)` : ''}
                                             </span>
                                         ) : null}
-                                        {bar.waste === 0 ? <span className="text-green-600 font-semibold">Sem perda</span> : null}
-                                    </span>
+                                        {bar.waste === 0 ? <span className="bg-green-100 text-green-800 border-2 border-green-800 px-2 py-1 uppercase tracking-widest">SEM PERDA</span> : null}
+                                    </div>
                                 </div>
 
-                                <div className={`h-12 bg-gray-200 rounded-md flex overflow-hidden border ${bar.groupQuantity > 1 ? 'border-orange-300 shadow-sm ring-2 ring-orange-50' : 'border-gray-300'} relative`}>
+                                <div className={`h-16 bg-gray-200 flex overflow-hidden border-2 relative ${bar.groupQuantity > 1 ? 'border-[var(--color-accent)] shadow-[4px_4px_0px_0px_var(--color-accent)]' : 'border-[var(--color-ink)] shadow-[4px_4px_0px_0px_var(--color-ink)]'}`}>
                                     {bar.cuts.map((cut, idx) => (
                                         <div
                                             key={idx}
                                             style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                            className="h-full bg-[var(--color-ink)] border-r border-white flex items-center justify-center text-white text-xs font-mono relative group transition-colors hover:bg-gray-800"
+                                            className="h-full bg-[var(--color-ink)] border-r-2 border-[var(--color-bg)] flex items-center justify-center text-white text-xs font-mono relative group transition-colors hover:bg-[var(--color-accent)] cursor-crosshair"
                                         >
-                                            <span className="truncate px-1 font-bold">{cut.length}</span>
-                                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-black text-white text-xs p-1.5 rounded whitespace-nowrap z-10 shadow-lg border border-gray-700">
-                                                {cut.description || `Peça ${idx + 1}`} - {cut.length}mm
-                                                {bar.groupQuantity > 1 && <span className="block mt-1 pt-1 border-t border-gray-600 text-gray-300">Total a cortar: {bar.groupQuantity} peças iguais</span>}
+                                            <span className="truncate px-1 font-black">{cut.length}</span>
+
+                                            {/* Tooltip */}
+                                            <div className="absolute bottom-full mb-2 hidden group-hover:block bg-white text-[var(--color-ink)] text-xs p-2 whitespace-nowrap z-10 border-2 border-[var(--color-ink)] shadow-[4px_4px_0px_0px_var(--color-ink)] font-bold">
+                                                <div className="uppercase border-b-2 border-dashed border-[var(--color-ink)] pb-1 mb-1">
+                                                    {cut.description || `PEÇA ${idx + 1}`}
+                                                </div>
+                                                <div className="font-black text-sm">COMPRIMENTO: {cut.length}MM</div>
+                                                {bar.groupQuantity > 1 && (
+                                                    <div className="mt-1 pt-1 border-t-2 border-[var(--color-ink)] text-[var(--color-accent)]">
+                                                        CORTAR {bar.groupQuantity} PEÇAS IGUAIS
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
                                     ))}
                                     {/* Waste */}
                                     <div
-                                        style={{ width: `${(bar.waste / bar.length) * 100}%` }}
-                                        className="h-full bg-red-100 flex items-center justify-center text-red-800 text-xs font-mono border-l-2 border-red-200"
+                                        className="h-full flex items-center justify-center text-red-800 text-xs font-mono border-l-2 border-dashed border-red-800 relative cursor-not-allowed"
+                                        style={{
+                                            width: `${(bar.waste / bar.length) * 100}%`,
+                                            backgroundImage: 'repeating-linear-gradient(45deg, #fee2e2 0, #fee2e2 1px, #fecaca 0, #fecaca 50%)',
+                                            backgroundSize: '10px 10px'
+                                        }}
                                     >
-                                        <span className="truncate px-1">{bar.waste}</span>
+                                        <div className="bg-white/80 px-1 border border-red-800">
+                                            <span className="truncate font-black">{bar.waste}</span>
+                                        </div>
                                     </div>
                                 </div>
 
                                 {/* Visual stacked effect for grouped bars */}
                                 {bar.groupQuantity > 1 && (
                                     <>
-                                        <div className="absolute top-10 left-1 right-1 h-12 bg-[var(--color-ink)] opacity-10 rounded-b-md -z-10 border border-gray-300"></div>
+                                        <div className="absolute top-12 left-2 right-2 h-16 bg-[var(--color-ink)] opacity-10 border-2 border-[var(--color-ink)] -z-10 shadow-[4px_4px_0px_0px_rgba(0,0,0,0.1)]"></div>
                                         {bar.groupQuantity > 2 && (
-                                            <div className="absolute top-11 left-2 right-2 h-12 bg-[var(--color-ink)] opacity-5 rounded-b-md -z-20 border border-gray-200"></div>
+                                            <div className="absolute top-14 left-4 right-4 h-16 bg-[var(--color-ink)] opacity-5 border-2 border-[var(--color-ink)] -z-20"></div>
                                         )}
                                     </>
                                 )}
@@ -246,18 +284,19 @@ export function StepResults({
 
             {/* Items Not Fit */}
             {result.itemsNotFit.length > 0 && (
-                <div className="bg-red-50 border border-red-200 rounded-md p-4">
+                <div className="bg-red-50 border-4 border-red-600 p-6 shadow-[8px_8px_0px_0px_#dc2626]">
                     <div className="flex">
-                        <div className="flex-shrink-0">
-                            <AlertCircle className="h-5 w-5 text-red-400" aria-hidden="true" />
+                        <div className="flex-shrink-0 mr-4">
+                            <AlertCircle className="h-8 w-8 text-red-600" aria-hidden="true" />
                         </div>
-                        <div className="ml-3">
-                            <h3 className="text-sm font-medium text-red-800">Itens não otimizados</h3>
-                            <div className="mt-2 text-sm text-red-700">
-                                <ul className="list-disc pl-5 space-y-1">
+                        <div>
+                            <h3 className="text-lg font-black text-red-800 uppercase tracking-widest mb-2 border-b-2 border-red-200 pb-2">ALERTA: ITENS NÃO OTIMIZADOS</h3>
+                            <div className="text-sm font-bold text-red-700 uppercase tracking-widest">
+                                <ul className="list-disc pl-5 space-y-2">
                                     {result.itemsNotFit.map((item, idx) => (
                                         <li key={idx}>
-                                            {item.material} - {item.length}mm (Muito grande para as barras disponíveis)
+                                            <span className="font-black">{item.material}</span> - {item.length}MM
+                                            <span className="ml-2 bg-red-200 text-red-900 px-2 py-0.5 text-[10px] hidden sm:inline-block">EXCEDE ESTOQUE</span>
                                         </li>
                                     ))}
                                 </ul>
@@ -268,50 +307,52 @@ export function StepResults({
             )}
 
             {/* Save Project */}
-            <div className="flex flex-col bg-gray-50 p-4 rounded-lg border border-[var(--color-line)]">
-                <div className="flex justify-between items-center mb-4">
-                    <div className="flex-1 mr-4">
-                        <label htmlFor="project-name" className="block text-sm font-medium text-gray-700">Nome do Projeto</label>
+            <div className="bg-[var(--color-bg)] p-6 border-4 border-[var(--color-ink)] shadow-[8px_8px_0px_0px_var(--color-ink)]">
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-end mb-6 gap-6 pb-6 border-b-2 border-dashed border-[var(--color-ink)]">
+                    <div className="flex-1 w-full">
+                        <label htmlFor="project-name" className="block text-sm font-black text-[var(--color-ink)] uppercase tracking-widest mb-2">IDENTIFICAÇÃO DO PROJETO</label>
                         <input
                             type="text"
                             id="project-name"
-                            className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                            placeholder="Ex: Estrutura Galpão A"
+                            className="block w-full border-2 border-[var(--color-ink)] bg-white rounded-none outline-none focus:ring-0 focus:border-[var(--color-accent)] text-lg font-black px-4 py-3 uppercase"
+                            placeholder="EX: ESTRUTURA GALPÃO A"
                             value={projectName}
                             onChange={(e) => setProjectName(e.target.value)}
                         />
                     </div>
-                    <div className="flex items-end h-full pb-1">
-                        <div className="flex items-center">
-                            <input
-                                id="auto-update-stock"
-                                name="auto-update-stock"
-                                type="checkbox"
-                                checked={autoUpdateStock}
-                                onChange={(e) => setAutoUpdateStock(e.target.checked)}
-                                className="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded"
-                            />
-                            <label htmlFor="auto-update-stock" className="ml-2 block text-sm text-gray-900">
-                                Atualizar estoque automaticamente
-                            </label>
+
+                    <label className="flex items-center cursor-pointer group bg-white border-2 border-[var(--color-ink)] px-4 py-3 hover:bg-[var(--color-ink)] hover:text-white transition-colors">
+                        <input
+                            id="auto-update-stock"
+                            name="auto-update-stock"
+                            type="checkbox"
+                            checked={autoUpdateStock}
+                            onChange={(e) => setAutoUpdateStock(e.target.checked)}
+                            className="sr-only peer"
+                        />
+                        <div className="w-6 h-6 border-2 border-current bg-transparent flex items-center justify-center mr-3 peer-checked:bg-[var(--color-accent)] peer-checked:border-[var(--color-accent)]">
+                            {autoUpdateStock && <span className="text-white text-sm font-black block leading-none relative bottom-[1px]">✓</span>}
                         </div>
-                    </div>
+                        <span className="text-sm font-black uppercase tracking-widest group-hover:text-white">
+                            ATUALIZAR ESTOQUE AUT.
+                        </span>
+                    </label>
                 </div>
 
-                <div className="flex justify-end space-x-3">
+                <div className="flex flex-col sm:flex-row justify-end space-y-4 sm:space-y-0 sm:space-x-4">
                     <button
                         onClick={onBack}
-                        className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"
+                        className="inline-flex items-center justify-center px-6 py-4 border-2 border-[var(--color-ink)] text-sm font-black uppercase tracking-widest text-[var(--color-ink)] bg-white hover:bg-[var(--color-ink)] hover:text-white transition-all active:scale-95"
                     >
-                        Editar
+                        EDITAR DADOS
                     </button>
                     <button
                         onClick={onSave}
                         disabled={loading}
-                        className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-green-600 hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500"
+                        className="inline-flex items-center justify-center px-8 py-4 border-4 border-[var(--color-ink)] text-lg font-black uppercase tracking-widest text-[var(--color-bg)] bg-[var(--color-accent)] hover:bg-[var(--color-ink)] transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px] disabled:opacity-50 disabled:shadow-[4px_4px_0px_0px_var(--color-ink)] disabled:translate-y-0 disabled:translate-x-0"
                     >
-                        <Save className="h-4 w-4 mr-2" />
-                        {loading ? 'Salvando...' : 'Salvar Projeto'}
+                        <Save className="h-5 w-5 mr-3" />
+                        {loading ? 'SALVANDO...' : 'SALVAR PROJETO'}
                     </button>
                 </div>
             </div>

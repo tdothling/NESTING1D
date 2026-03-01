@@ -105,7 +105,7 @@ export default function Dashboard() {
             <div>
               <div className="flex items-center justify-between mb-6 border-b-4 border-[var(--color-ink)] pb-4">
                 <div className="flex items-center space-x-4">
-                  <div className="w-3 h-8 bg-[var(--color-accent)] animate-pulse"></div>
+                  <div className="w-3 h-8 bg-[var(--color-accent)]"></div>
                   <h2 className="text-2xl font-black text-[var(--color-ink)] font-mono uppercase tracking-widest">
                     Últimas Execuções
                   </h2>
@@ -113,54 +113,79 @@ export default function Dashboard() {
               </div>
 
               {projects.length === 0 ? (
-                <div className="border-4 border-[var(--color-ink)] border-dashed p-12 text-center flex flex-col items-center justify-center">
-                  <Scissors className="w-12 h-12 mb-4 opacity-50" />
-                  <p className="font-mono uppercase font-bold text-lg">Sem registros de corte.</p>
-                  <p className="font-mono text-sm opacity-70 mt-2">Inicie um novo projeto para popular esta base.</p>
+                <div className="border-4 border-[var(--color-ink)] border-dashed p-12 text-center flex flex-col items-center justify-center bg-[var(--color-bg)]">
+                  <Scissors className="w-12 h-12 mb-4 opacity-50 text-[var(--color-ink)]" />
+                  <p className="font-mono uppercase font-black text-xl text-[var(--color-ink)]">SEM REGISTROS DE CORTE.</p>
+                  <p className="font-mono text-sm opacity-70 mt-2 font-bold uppercase tracking-widest text-[var(--color-ink)]">INICIE UM NOVO PROJETO PARA POPULAR ESTA BASE.</p>
                 </div>
               ) : (
-                <div className="border-4 border-[var(--color-ink)] bg-white overflow-hidden">
-                  <div className="grid grid-cols-12 border-b-4 border-[var(--color-ink)] bg-[var(--color-bg)]">
-                    <div className="col-span-5 p-4 font-mono font-bold text-xs tracking-widest uppercase">ID / Referência</div>
-                    <div className="col-span-3 p-4 font-mono font-bold text-xs tracking-widest uppercase border-l-4 border-[var(--color-ink)]">Status</div>
-                    <div className="col-span-3 p-4 font-mono font-bold text-xs tracking-widest uppercase border-l-4 border-[var(--color-ink)]">Volume</div>
-                    <div className="col-span-1 p-4 border-l-4 border-[var(--color-ink)]"></div>
+                <div className="border-4 border-[var(--color-ink)] bg-white overflow-hidden shadow-[8px_8px_0px_0px_var(--color-ink)]">
+                  <div className="hidden sm:grid grid-cols-12 border-b-4 border-[var(--color-ink)] bg-[var(--color-ink)] text-[var(--color-bg)]">
+                    <div className="col-span-5 p-4 font-mono font-black text-xs tracking-widest uppercase border-r-2 border-white border-opacity-20">PROJETO / DATA</div>
+                    <div className="col-span-3 p-4 font-mono font-black text-xs tracking-widest uppercase border-r-2 border-white border-opacity-20 flex justify-center">STATUS</div>
+                    <div className="col-span-3 p-4 font-mono font-black text-xs tracking-widest uppercase border-r-2 border-white border-opacity-20 flex justify-center">PEÇAS / BARRAS</div>
+                    <div className="col-span-1 p-4 font-mono font-black text-xs tracking-widest uppercase flex justify-center">AÇÕES</div>
                   </div>
 
-                  {projects.map((project, index) => (
-                    <Link href={`/optimize?id=${project.id}`} key={project.id} className="grid grid-cols-12 border-b last:border-b-0 border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] hover:text-white transition-colors group cursor-pointer items-stretch">
-                      <div className="col-span-5 p-4 flex flex-col justify-center">
-                        <span className="font-mono font-bold truncate text-lg group-hover:text-[var(--color-bg)]">{project.name}</span>
-                        <span className="font-mono text-xs opacity-50 group-hover:opacity-100 group-hover:text-gray-400">
-                          {new Date(project.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' })}
-                        </span>
-                      </div>
-                      <div className="col-span-3 p-4 border-l border-[var(--color-ink)] border-opacity-30 group-hover:border-[var(--color-bg)] group-hover:border-opacity-30 flex items-center">
-                        {project.result ? (
-                          <span className="inline-flex items-center px-2 py-1 bg-[var(--color-ink)] text-[var(--color-bg)] group-hover:bg-white group-hover:text-[var(--color-ink)] font-mono text-xs font-bold uppercase border border-[var(--color-ink)] group-hover:border-white">
-                            Finalizado
-                          </span>
-                        ) : (
-                          <span className="inline-flex items-center px-2 py-1 bg-transparent text-[var(--color-ink)] group-hover:text-white font-mono text-xs font-bold uppercase border border-[var(--color-ink)] border-dashed group-hover:border-white">
-                            Em Progresso
-                          </span>
-                        )}
-                      </div>
-                      <div className="col-span-3 p-4 border-l border-[var(--color-ink)] border-opacity-30 group-hover:border-[var(--color-bg)] group-hover:border-opacity-30 flex items-center">
-                        <span className="font-mono font-black text-xl group-hover:text-[var(--color-accent)]">{project.requests.length}</span>
-                        <span className="font-mono text-xs ml-2 opacity-50 group-hover:opacity-100 uppercase">Peças</span>
-                      </div>
-                      <div className="col-span-1 border-l border-[var(--color-ink)] border-opacity-30 group-hover:border-[var(--color-bg)] group-hover:border-opacity-30 flex items-center justify-center">
-                        <button
-                          onClick={(e) => handleDeleteProject(project.id, e)}
-                          className="p-3 text-[var(--color-ink)] group-hover:text-white hover:bg-[var(--color-accent)] transition-colors active:scale-95"
-                          title="Excluir projeto"
-                        >
-                          <Trash2 className="h-5 w-5" />
-                        </button>
-                      </div>
-                    </Link>
-                  ))}
+                  <ul className="divide-y-4 divide-[var(--color-ink)]">
+                    {projects.map((project, index) => {
+                      const hasResult = !!project.result;
+                      const dateFormated = new Date(project.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
+
+                      return (
+                        <li key={project.id} className="group flex flex-col sm:grid sm:grid-cols-12 relative hover:bg-[var(--color-bg)] transition-colors bg-white">
+
+                          {/* Status Indicator Bar (Mobile) */}
+                          <div className={`sm:hidden absolute left-0 top-0 bottom-0 w-2 ${hasResult ? 'bg-[var(--color-ink)]' : 'bg-amber-400'}`}></div>
+
+                          <Link href={`/optimize?id=${project.id}`} className="col-span-5 p-4 pl-6 sm:pl-4 sm:flex sm:flex-col sm:justify-center border-b-2 sm:border-b-0 border-dashed border-[var(--color-ink)] border-opacity-20 sm:border-r-2 sm:border-solid decoration-transparent hover:decoration-[var(--color-accent)] underline decoration-2 underline-offset-4 transition-all">
+                            <span className="font-mono font-black truncate text-lg text-[var(--color-ink)] uppercase tracking-widest block mb-1">{project.name || 'PROJETO SEM NOME'}</span>
+                            <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-60 text-[var(--color-ink)]">
+                              {dateFormated}
+                            </span>
+                          </Link>
+
+                          <div className="col-span-3 p-4 flex sm:justify-center items-center border-b-2 sm:border-b-0 border-dashed border-[var(--color-ink)] border-opacity-20 sm:border-r-2 sm:border-solid">
+                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 sm:hidden mr-2">STATUS:</span>
+                            {hasResult ? (
+                              <span className="inline-flex items-center px-3 py-1 bg-[var(--color-ink)] text-[var(--color-bg)] font-mono text-xs font-black uppercase tracking-widest border border-[var(--color-ink)]">
+                                FINALIZADO
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center px-3 py-1 bg-amber-50 text-amber-700 font-mono text-xs font-black uppercase tracking-widest border border-amber-500">
+                                RASCUNHO
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="col-span-3 p-4 flex sm:justify-center items-center border-b-2 sm:border-b-0 border-dashed border-[var(--color-ink)] border-opacity-20 sm:border-r-2 sm:border-solid">
+                            <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 sm:hidden mr-2">VOLUME:</span>
+                            <div className="flex items-baseline space-x-1">
+                              <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.requests.length}</span>
+                              <span className="font-mono text-xs font-bold opacity-60 uppercase tracking-widest">PÇS</span>
+                              {hasResult && (
+                                <>
+                                  <span className="font-mono text-xl text-[var(--color-ink)] opacity-30 mx-1">/</span>
+                                  <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.result?.totalStockUsed}</span>
+                                  <span className="font-mono text-xs font-bold opacity-60 uppercase tracking-widest">BRS</span>
+                                </>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="col-span-1 sm:border-l-0 border-[var(--color-ink)] border-opacity-30 group-hover:border-[var(--color-bg)] group-hover:border-opacity-30 flex items-stretch sm:justify-center bg-red-50 sm:bg-transparent absolute top-0 right-0 sm:relative sm:h-auto h-full w-16 sm:w-auto">
+                            <button
+                              onClick={(e) => handleDeleteProject(project.id, e)}
+                              className="flex-1 w-full h-full flex justify-center items-center p-3 text-red-600 sm:text-[var(--color-ink)] sm:opacity-50 hover:opacity-100 hover:text-white hover:bg-red-600 transition-colors active:scale-95 sm:relative absolute inset-0 text-center"
+                              title="EXCLUIR PROJETO"
+                            >
+                              <Trash2 className="h-5 w-5 mx-auto" />
+                            </button>
+                          </div>
+                        </li>
+                      );
+                    })}
+                  </ul>
                 </div>
               )}
             </div>
