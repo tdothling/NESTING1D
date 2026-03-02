@@ -5,13 +5,16 @@ interface OptimizerOptions {
   defaultStandardLength: number;
   kerf: number; // blade thickness, e.g., 3mm
   maxScrapLength: number; // lengths below this are true waste, lengths above or equal return to stock
+  maxWeldsPerElement?: number; // max welds per composite element (default: 3, meaning up to 4 pieces)
 }
 
 export function optimizeCuts(
   requests: CutRequest[],
   stock: StockItem[],
-  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000 }
+  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 3 }
 ): { results: BarResult[]; remainingStock: StockItem[]; itemsNotFit: CutRequest[]; purchaseList: PurchaseItem[]; totalTrueWaste: number; totalTrueWasteKg: number; totalReusableScrap: number } {
+
+  const maxWeldsPerElement = options.maxWeldsPerElement ?? 3;
 
   // Group requests by material
   const requestsByMaterial: Record<string, CutRequest[]> = {};
@@ -217,6 +220,178 @@ export function optimizeCuts(
       }
     }
 
+    // =====================================================
+    // PHASE 2: Composite Bar Composition (Welding Scraps)
+    // =====================================================
+    // After bin-packing, take reusable scraps from bins and combine them
+    // via welding to form items, freeing the bin those items were in.
+    //
+    // Strategy:
+    // 1. Collect all bins with reusable scrap (remainingLength >= maxScrapLength)
+    // 2. For new-standard bins, try to extract items and compose them from scraps
+    // 3. When a bin loses all its items, it is freed (no bar purchase needed)
+    // 4. Iterate until no more compositions can be made
+
+    if (maxWeldsPerElement > 0) {
+      const maxPieces = maxWeldsPerElement + 1;
+
+      interface ScrapSource {
+        binIndex: number;
+        length: number;
+      }
+
+      const getAvailableScraps = (): ScrapSource[] => {
+        const scraps: ScrapSource[] = [];
+        for (let i = 0; i < openBins.length; i++) {
+          if (openBins[i].remainingLength >= options.maxScrapLength) {
+            scraps.push({ binIndex: i, length: openBins[i].remainingLength });
+          }
+        }
+        scraps.sort((a, b) => b.length - a.length);
+        return scraps;
+      };
+
+      const findScrapCombination = (
+        targetLength: number,
+        availableScraps: ScrapSource[],
+        excludeBinIndices: Set<number>
+      ): { usedScraps: ScrapSource[]; parts: number[] } | null => {
+        const filtered = availableScraps.filter(s => !excludeBinIndices.has(s.binIndex));
+        if (filtered.length < 2) return null;
+
+        // Try 2 scraps (1 weld)
+        for (let i = 0; i < filtered.length; i++) {
+          for (let j = i + 1; j < filtered.length; j++) {
+            const total = filtered[i].length + filtered[j].length;
+            const needed = targetLength + options.kerf; // 1 weld joint
+            if (total >= needed) {
+              const part1 = filtered[i].length;
+              const part2 = targetLength - part1;
+              if (part2 > 0 && (part2 + options.kerf) <= filtered[j].length) {
+                return { usedScraps: [filtered[i], filtered[j]], parts: [part1, part2] };
+              }
+            }
+          }
+        }
+
+        // Try 3 scraps (2 welds)
+        if (maxPieces >= 3) {
+          for (let i = 0; i < filtered.length; i++) {
+            for (let j = i + 1; j < filtered.length; j++) {
+              for (let k = j + 1; k < filtered.length; k++) {
+                const total = filtered[i].length + filtered[j].length + filtered[k].length;
+                const needed = targetLength + options.kerf * 2;
+                if (total >= needed) {
+                  const p1 = filtered[i].length;
+                  const p2 = filtered[j].length;
+                  const p3 = targetLength - p1 - p2;
+                  if (p3 > 0 && (p3 + options.kerf) <= filtered[k].length) {
+                    return { usedScraps: [filtered[i], filtered[j], filtered[k]], parts: [p1, p2, p3] };
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        // Try 4 scraps (3 welds)
+        if (maxPieces >= 4) {
+          for (let i = 0; i < filtered.length; i++) {
+            for (let j = i + 1; j < filtered.length; j++) {
+              for (let k = j + 1; k < filtered.length; k++) {
+                for (let l = k + 1; l < filtered.length; l++) {
+                  const total = filtered[i].length + filtered[j].length + filtered[k].length + filtered[l].length;
+                  const needed = targetLength + options.kerf * 3;
+                  if (total >= needed) {
+                    const p1 = filtered[i].length;
+                    const p2 = filtered[j].length;
+                    const p3 = filtered[k].length;
+                    const p4 = targetLength - p1 - p2 - p3;
+                    if (p4 > 0 && (p4 + options.kerf) <= filtered[l].length) {
+                      return { usedScraps: [filtered[i], filtered[j], filtered[k], filtered[l]], parts: [p1, p2, p3, p4] };
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+
+        return null;
+      };
+
+      // Iteratively extract items from bins and compose them from scraps
+      let changed = true;
+      while (changed) {
+        changed = false;
+        const availableScraps = getAvailableScraps();
+        if (availableScraps.length < 2) break;
+
+        // Sort candidate bins: fewest cuts first (so we can fully free bins faster)
+        const candidateEntries = openBins
+          .map((bin, idx) => ({ bin, idx }))
+          .filter(({ bin }) => bin.sourceId === 'new-standard')
+          .sort((a, b) => a.bin.cuts.length - b.bin.cuts.length);
+
+        for (const { bin, idx: binIdx } of candidateEntries) {
+          for (let cutIdx = 0; cutIdx < bin.cuts.length; cutIdx++) {
+            const cut = bin.cuts[cutIdx];
+            const targetLength = cut.length;
+            const excludeBins = new Set([binIdx]);
+
+            const combo = findScrapCombination(targetLength, availableScraps, excludeBins);
+            if (combo) {
+              // Consume scraps from source bins
+              for (let s = 0; s < combo.usedScraps.length; s++) {
+                const scrap = combo.usedScraps[s];
+                const partLen = combo.parts[s];
+                const kerfCharge = s > 0 ? options.kerf : 0;
+                openBins[scrap.binIndex].remainingLength -= (partLen + kerfCharge);
+              }
+
+              // Create composite bar result
+              const compositeCuts: Cut[] = combo.parts.map((partLen, pIdx) => ({
+                length: partLen,
+                description: `${cut.description || 'Peça'} (Solda ${pIdx + 1}/${combo.parts.length})`,
+                isWeld: true
+              }));
+
+              allResults.push({
+                id: `${material.replace(/\s+/g, '-')}-composite-${crypto.randomUUID()}`,
+                material: material,
+                profileId: materialProfileIds[material],
+                weightKgM: materialWeights[material],
+                length: targetLength,
+                cuts: compositeCuts,
+                waste: 0,
+                trueWaste: 0,
+                trueWasteKg: 0,
+                reusableScrap: 0,
+                isScrapUsed: true,
+                sourceId: 'composite',
+                isComposite: true,
+                compositeParts: combo.parts
+              });
+
+              // Remove the cut from the source bin
+              bin.cuts.splice(cutIdx, 1);
+              // Give back the space (the cut's length + kerf if there's still cuts after it)
+              bin.remainingLength += targetLength + (bin.cuts.length > 0 ? options.kerf : 0);
+
+              // If bin has no more cuts, fully free it
+              if (bin.cuts.length === 0) {
+                openBins.splice(binIdx, 1);
+              }
+
+              changed = true;
+              break;
+            }
+          }
+          if (changed) break;
+        }
+      }
+    }
+
     // Convert openBins to BarResult
     const weightPerMeter = materialWeights[material] || 0;
 
@@ -248,6 +423,8 @@ export function optimizeCuts(
   // We group by material + standardLength (the bar you actually buy)
   const purchaseList: PurchaseItem[] = [...directPurchases];
 
+  // Count only bars that are still in allResults with sourceId 'new-standard'
+  // (composite bars freed some of them, so we recount)
   const purchaseMap: Record<string, number> = {};
   for (const bar of allResults) {
     if (bar.sourceId === 'new-standard') {

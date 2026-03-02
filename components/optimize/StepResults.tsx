@@ -192,7 +192,7 @@ export function StepResults({
                     {(() => {
                         // Group identical bars
                         const groupedBars = result.bars.reduce((acc, bar) => {
-                            const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.cuts.map(c => c.length).join(',')}`;
+                            const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.isComposite || false}|${bar.cuts.map(c => c.length).join(',')}`;
                             if (!acc[signature]) {
                                 acc[signature] = { ...bar, groupQuantity: 1, originalIndices: [] };
                             } else {
@@ -212,8 +212,13 @@ export function StepResults({
                                         )}
                                         <span className="font-black text-[var(--color-ink)] text-sm uppercase">{bar.material}</span>
                                         <span className="bg-[var(--color-bg)] px-2 py-1 border border-[var(--color-ink)]">
-                                            BARRA {bar.length}MM {bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
+                                            BARRA {bar.length}MM {bar.isComposite ? '(SOLDADA)' : bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
                                         </span>
+                                        {bar.isComposite && bar.compositeParts && (
+                                            <span className="bg-orange-100 text-orange-800 border-2 border-orange-800 px-2 py-1 uppercase tracking-widest text-[10px] flex items-center gap-1">
+                                                🔥 {bar.compositeParts.length} PEÇAS · {bar.compositeParts.length - 1} SOLDAS
+                                            </span>
+                                        )}
                                     </div>
 
                                     <div className="flex gap-2">
@@ -234,7 +239,10 @@ export function StepResults({
                                         <div
                                             key={idx}
                                             style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                            className="h-full bg-[var(--color-ink)] border-r-2 border-[var(--color-bg)] flex items-center justify-center text-white text-xs font-mono relative group transition-colors hover:bg-[var(--color-accent)] cursor-crosshair"
+                                            className={`h-full flex items-center justify-center text-white text-xs font-mono relative group transition-colors cursor-crosshair ${cut.isWeld
+                                                    ? 'bg-orange-700 hover:bg-orange-500 border-r-2 border-dashed border-orange-300'
+                                                    : 'bg-[var(--color-ink)] hover:bg-[var(--color-accent)] border-r-2 border-[var(--color-bg)]'
+                                                }`}
                                         >
                                             <span className="truncate px-1 font-black">{cut.length}</span>
 

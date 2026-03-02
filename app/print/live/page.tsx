@@ -97,7 +97,7 @@ export default function PrintLivePage() {
                 {Object.entries(barsByMaterial).map(([material, materialBars], matIdx) => {
                     // Group identical bars within the material
                     const groupedBars = materialBars.reduce((acc, bar) => {
-                        const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.cuts.map(c => c.length).join(',')}`;
+                        const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.isComposite || false}|${bar.cuts.map(c => c.length).join(',')}`;
                         if (!acc[signature]) {
                             acc[signature] = { ...bar, groupQuantity: 1 };
                         } else {
@@ -125,7 +125,7 @@ export default function PrintLivePage() {
                                         {/* Bar Header */}
                                         <div className="flex justify-between items-center mb-2 text-sm mt-1">
                                             <span className="font-bold text-base">
-                                                {bar.groupQuantity > 1 ? `Lote #${barIdx + 1}` : `Barra #${barIdx + 1}`} — {bar.length}mm {bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
+                                                {bar.groupQuantity > 1 ? `Lote #${barIdx + 1}` : `Barra #${barIdx + 1}`} — {bar.length}mm {bar.isComposite ? '(SOLDADA)' : bar.isScrapUsed ? '(RETALHO)' : '(NOVA)'}
                                             </span>
                                             <div className="flex gap-4">
                                                 {bar.reusableScrap > 0 && (
@@ -146,7 +146,10 @@ export default function PrintLivePage() {
                                                 <div
                                                     key={cutIdx}
                                                     style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                                    className="h-full bg-gray-800 border-r-2 border-white flex items-center justify-center text-white text-sm font-bold"
+                                                    className={`h-full flex items-center justify-center text-white text-sm font-bold ${cut.isWeld
+                                                            ? 'bg-orange-700 border-r-2 border-dashed border-orange-300'
+                                                            : 'bg-gray-800 border-r-2 border-white'
+                                                        }`}
                                                 >
                                                     {cut.length}
                                                 </div>
@@ -167,7 +170,7 @@ export default function PrintLivePage() {
                                                 <div key={cutIdx} className="flex items-center gap-2">
                                                     <span className="inline-block w-4 h-4 border-2 border-gray-900 rounded-sm flex-shrink-0"></span>
                                                     <span>
-                                                        Cortar <strong>{cut.length}mm</strong> {cut.description ? `— ${cut.description}` : ''}
+                                                        {cut.isWeld ? 'Soldar' : 'Cortar'} <strong>{cut.length}mm</strong> {cut.description ? `— ${cut.description}` : ''}
                                                     </span>
                                                 </div>
                                             ))}

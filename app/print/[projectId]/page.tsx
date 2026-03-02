@@ -157,7 +157,7 @@ export default function PrintPage() {
                         {Object.entries(barsByMaterial).map(([material, materialBars], matIdx) => {
                             // Group identical bars within the material
                             const groupedBars = materialBars.reduce((acc, bar) => {
-                                const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.cuts.map(c => c.length).join(',')}`;
+                                const signature = `${bar.material}|${bar.length}|${bar.waste}|${bar.trueWaste}|${bar.isScrapUsed}|${bar.isComposite || false}|${bar.cuts.map(c => c.length).join(',')}`;
                                 if (!acc[signature]) {
                                     acc[signature] = { ...bar, groupQuantity: 1 };
                                 } else {
@@ -189,7 +189,7 @@ export default function PrintPage() {
                                                     <div>
                                                         <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 block">IDENTIFICAÇÃO</span>
                                                         <span className="font-black text-lg">
-                                                            {bar.length}mm <span className="text-sm border border-[var(--color-ink)] px-1 relative bottom-[2px]">{bar.isScrapUsed ? 'RETALHO' : 'BARRA NOVA'}</span>
+                                                            {bar.length}mm <span className="text-sm border border-[var(--color-ink)] px-1 relative bottom-[2px]">{bar.isComposite ? 'SOLDADA' : bar.isScrapUsed ? 'RETALHO' : 'BARRA NOVA'}</span>
                                                         </span>
                                                     </div>
 
@@ -221,7 +221,10 @@ export default function PrintPage() {
                                                         <div
                                                             key={cutIdx}
                                                             style={{ width: `${(cut.length / bar.length) * 100}%` }}
-                                                            className="h-full bg-[var(--color-bg)] border-r-2 border-[var(--color-ink)] flex items-center justify-center text-[var(--color-ink)] text-sm font-black relative overflow-hidden print:border-r print:bg-white"
+                                                            className={`h-full flex items-center justify-center text-[var(--color-ink)] text-sm font-black relative overflow-hidden print:bg-white ${cut.isWeld
+                                                                    ? 'bg-orange-100 border-r-2 border-dashed border-orange-500 print:border-r'
+                                                                    : 'bg-[var(--color-bg)] border-r-2 border-[var(--color-ink)] print:border-r'
+                                                                }`}
                                                         >
                                                             {/* Crosshatch pattern for cuts */}
                                                             <div className="absolute inset-0 opacity-10" style={{ backgroundImage: 'repeating-linear-gradient(45deg, #141414 0, #141414 1px, transparent 0, transparent 50%)', backgroundSize: '10px 10px' }}></div>
@@ -257,7 +260,7 @@ export default function PrintPage() {
                                                                 <div className="flex-1">
                                                                     <div className="flex justify-between w-full">
                                                                         <span>{cut.length}mm</span>
-                                                                        <span className="px-1 border border-[var(--color-ink)] text-[10px] ml-2 leading-tight flex items-center bg-[var(--color-bg)] print:bg-white">CORTE</span>
+                                                                        <span className={`px-1 border text-[10px] ml-2 leading-tight flex items-center print:bg-white ${cut.isWeld ? 'border-orange-600 text-orange-700 bg-orange-50' : 'border-[var(--color-ink)] bg-[var(--color-bg)]'}`}>{cut.isWeld ? 'SOLDA' : 'CORTE'}</span>
                                                                     </div>
                                                                     {cut.description && (
                                                                         <p className="text-xs opacity-60 font-medium mt-1 uppercase tracking-widest truncate">{cut.description}</p>

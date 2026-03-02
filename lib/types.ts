@@ -30,6 +30,7 @@ export interface Cut {
   length: number;
   description?: string;
   color?: string;
+  isWeld?: boolean;  // true if this cut came from a welded/composite piece
 }
 
 export interface BarResult {
@@ -45,6 +46,8 @@ export interface BarResult {
   reusableScrap: number; // The amount of waste that goes back to stock
   isScrapUsed: boolean;
   sourceId?: string; // ID of the stock item used
+  isComposite?: boolean;       // true if this bar was composed from leftover pieces via welding
+  compositeParts?: number[];   // lengths of the pieces that compose this bar
 }
 
 export interface PurchaseItem {
