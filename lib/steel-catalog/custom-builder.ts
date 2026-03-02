@@ -16,6 +16,8 @@ export interface CalculatedProfile {
     category: ProfileCategory;
     weightKgM: number;
     isCustom: boolean;
+    dimensions?: ProfileDimensions;
+    formula?: string;
 }
 
 const STEEL_DENSITY = 7.85; // kg/m³ * 10^-3 for mm units
@@ -97,7 +99,3 @@ export function buildCustomProfile(input: CustomProfileInput): CalculatedProfile
 }
 
 export type ProfileDimensions = Omit<CustomProfileInput, 'type'>;
-
-export function calculateWeightKgM(type: ProfileCategory, dims: ProfileDimensions): number {
-    return buildCustomProfile({ type, ...dims }).weightKgM;
-}

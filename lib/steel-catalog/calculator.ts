@@ -138,6 +138,7 @@ export function buildProfile(
     const formula = getFormulaDescription(type);
 
     return {
+        id: `custom-${type}-${crypto.randomUUID()}`,
         name,
         category: type,
         weightKgM,
