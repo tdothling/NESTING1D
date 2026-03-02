@@ -335,8 +335,8 @@ export default function InventoryPage() {
                           </div>
                         </td>
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
-                          <div className="flex items-center justify-end">
-                            <span className="block w-full bg-transparent sm:text-xl font-black font-mono text-[var(--color-ink)] p-2 text-right">
+                          <div className="flex items-center">
+                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-lg font-black font-mono text-[var(--color-ink)] p-2 text-right">
                               {(item.quantity * (item.length / 1000) * (item.weightKgM || 0)).toFixed(2)}
                             </span>
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">KG</span>

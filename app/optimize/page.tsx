@@ -201,6 +201,10 @@ function OptimizeContent() {
       };
 
       if (projectId) {
+        // First rollback the old project's stock effect to prevent duplicates
+        if (autoUpdateStock) {
+          await rollbackStock(projectId);
+        }
         await updateProject(project);
       } else {
         await addProject(project);
