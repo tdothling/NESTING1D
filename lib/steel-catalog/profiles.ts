@@ -140,3 +140,37 @@ export const PROFILES_DB: SteelProfile[] = [
         supplier: 'Gerdau'
     }
 ];
+
+export const PROFILE_LABELS: Record<ProfileCategory, string> = {
+    'ue': 'U Enrijecido',
+    'u_simples': 'U Simples',
+    'cartola': 'Cartola',
+    'z': 'Perfil Z',
+    'w_hp': 'W / HP',
+    'cantoneira': 'Cantoneira',
+    'barra_chata': 'Barra Chata',
+    'barra_redonda': 'Barra Redonda',
+    'chapa': 'Chapa',
+};
+
+// UI Mapping for the Custom Builder in StepReview
+export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof Omit<SteelProfile, 'id' | 'name' | 'category' | 'weightKgM' | 'standardLengthMm' | 'area' | 'standard' | 'supplier' | 'aliases'>)[]> = {
+    'ue': ['height', 'width', 'lipHeight', 'thickness'],
+    'u_simples': ['height', 'width', 'thickness'],
+    'cartola': ['height', 'width', 'lipHeight', 'thickness'],
+    'z': ['height', 'width', 'thickness'],
+    'cantoneira': ['width', 'thickness'],
+    'barra_chata': ['width', 'thickness'],
+    'barra_redonda': ['diameter'],
+    'chapa': ['thickness'],
+    'w_hp': [], // Handled specifically by weight input
+};
+
+export const DIMENSION_LABELS: Record<string, string> = {
+    height: 'Alma (H)',
+    width: 'Mesa / Aba (B)',
+    thickness: 'Espessura (T)',
+    lipHeight: 'Enrijec. (D)',
+    diameter: 'Diâmetro (Ø)',
+    flangeThickness: 'Esp. Mesa',
+};
