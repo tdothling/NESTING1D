@@ -7,16 +7,19 @@ CREATE TABLE IF NOT EXISTS projects (
   name TEXT NOT NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
   requests_json JSONB,
-  result_json JSONB
+  result_json JSONB,
+  settings_json JSONB
 );
 
 -- 2. Create Stock Table
 CREATE TABLE IF NOT EXISTS stock (
   id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   material TEXT NOT NULL,
+  profile_id TEXT,
   length INTEGER NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 0,
   weight_kg_m NUMERIC(10, 2) DEFAULT 0,
+  price_per_meter NUMERIC(10, 2) DEFAULT 0,
   is_scrap BOOLEAN DEFAULT false,
   origin_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,

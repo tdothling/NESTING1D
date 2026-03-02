@@ -81,8 +81,14 @@ export default function InventoryPage() {
     // 2. Sort
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
-        let aValue = a[sortConfig.key];
-        let bValue = b[sortConfig.key];
+        let aValue: any = a[sortConfig.key];
+        let bValue: any = b[sortConfig.key];
+
+        // Custom sort logic for 'weight' which isn't a direct key on StockItem
+        if (sortConfig.key === 'weightKgM') {
+          aValue = a.quantity * (a.length / 1000) * (a.weightKgM || 0);
+          bValue = b.quantity * (b.length / 1000) * (b.weightKgM || 0);
+        }
 
         if (aValue == null) aValue = '';
         if (bValue == null) bValue = '';
@@ -252,6 +258,10 @@ export default function InventoryPage() {
                       R$/metro
                       {sortConfig?.key === 'pricePerMeter' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('weightKgM')}>
+                      Peso KG
+                      {sortConfig?.key === 'weightKgM' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
                     <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[20%] min-w-[180px]" onClick={() => requestSort('isScrap')}>
                       Classificação
                       {sortConfig?.key === 'isScrap' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
@@ -322,6 +332,14 @@ export default function InventoryPage() {
                               onChange={(e) => updateItem(item.id, 'pricePerMeter', Number(e.target.value))}
                               className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
                             />
+                          </div>
+                        </td>
+                        <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
+                          <div className="flex items-center justify-end">
+                            <span className="block w-full bg-transparent sm:text-xl font-black font-mono text-[var(--color-ink)] p-2 text-right">
+                              {(item.quantity * (item.length / 1000) * (item.weightKgM || 0)).toFixed(2)}
+                            </span>
+                            <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">KG</span>
                           </div>
                         </td>
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">

@@ -36,53 +36,53 @@ export function buildCustomProfile(input: CustomProfileInput): CalculatedProfile
         case 'ue':
             // [h + 2*b + 2*d] * t * 0.00785
             weightKgM = (h + 2 * b + 2 * d) * t * (STEEL_DENSITY / 1000);
-            name = `Ue ${h}x${b}x${d}x${t.toFixed(2)} (Custom)`;
+            name = `Ue ${h}x${b}x${d}x${t.toFixed(2)}`;
             break;
 
         case 'u_simples':
             // [h + 2*b] * t * 0.00785
             weightKgM = (h + 2 * b) * t * (STEEL_DENSITY / 1000);
-            name = `U ${h}x${b}x${t.toFixed(2)} (Custom)`;
+            name = `U ${h}x${b}x${t.toFixed(2)}`;
             break;
 
         case 'cartola':
             // [h + 2*b + 2*a] * t * 0.00785 (a = d here for simplicity)
             weightKgM = (h + 2 * b + 2 * d) * t * (STEEL_DENSITY / 1000);
-            name = `Cartola ${h}x${b}x${d}x${t.toFixed(2)} (Custom)`;
+            name = `Cartola ${h}x${b}x${d}x${t.toFixed(2)}`;
             break;
 
         case 'z':
             // [h + 2*b] * t * 0.00785
             weightKgM = (h + 2 * b) * t * (STEEL_DENSITY / 1000);
-            name = `Z ${h}x${b}x${t.toFixed(2)} (Custom)`;
+            name = `Z ${h}x${b}x${t.toFixed(2)}`;
             break;
 
         case 'cantoneira':
             // [a + b - t] * t * 0.00785 (assuming equal legs a=b=width)
             weightKgM = (b + b - t) * t * (STEEL_DENSITY / 1000);
-            name = `L ${b}x${t.toFixed(2)} (Custom)`;
+            name = `L ${b}x${t.toFixed(2)}`;
             break;
 
         case 'barra_chata':
             weightKgM = b * t * (STEEL_DENSITY / 1000);
-            name = `Chat. ${b}x${t.toFixed(2)} (Custom)`;
+            name = `Chat. ${b}x${t.toFixed(2)}`;
             break;
 
         case 'barra_redonda':
             const dia = input.diameter || 0;
             weightKgM = Math.pow(dia, 2) * 0.006165;
-            name = `BR Ø${dia} (Custom)`;
+            name = `BR Ø${dia}`;
             break;
 
         case 'chapa':
             weightKgM = t * STEEL_DENSITY; // kg/m²
-            name = `Chapa e=${t.toFixed(2)} (Custom)`;
+            name = `Chapa e=${t.toFixed(2)}`;
             break;
 
         case 'w_hp':
             // Approximation for W shapes
             weightKgM = (h * t + 2 * b * tf) * (STEEL_DENSITY / 1000);
-            name = `W/HP ${h}x${b} (Custom)`;
+            name = `W/HP ${h}x${b}`;
             break;
 
         default:
