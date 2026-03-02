@@ -4,13 +4,16 @@ import { useState, useEffect, useMemo } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { getStock, saveStock, deleteStockItem } from '@/lib/store';
 import { StockItem } from '@/lib/types';
-import { Plus, Trash2, Save, ArrowUpDown, ArrowDown, ArrowUp } from 'lucide-react';
+import { Plus, Trash2, Save, ArrowUpDown, ArrowDown, ArrowUp, Weight, CircleDollarSign, Shapes } from 'lucide-react';
 import { toast } from 'sonner';
+import { ProfileAutocomplete } from '@/components/ProfileAutocomplete';
+import { SteelProfile } from '@/lib/steel-catalog';
 
 export default function InventoryPage() {
   const [stock, setStock] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [sortConfig, setSortConfig] = useState<{ key: keyof StockItem; direction: 'asc' | 'desc' } | null>(null);
+  const [filterTab, setFilterTab] = useState<'all' | 'bars' | 'scraps'>('all');
 
   useEffect(() => {
     const loadStock = async () => {
@@ -67,6 +70,15 @@ export default function InventoryPage() {
 
   const sortedStock = useMemo(() => {
     let sortableItems = [...stock];
+
+    // 1. Filter by Tab
+    if (filterTab === 'bars') {
+      sortableItems = sortableItems.filter(item => !item.isScrap);
+    } else if (filterTab === 'scraps') {
+      sortableItems = sortableItems.filter(item => item.isScrap);
+    }
+
+    // 2. Sort
     if (sortConfig !== null) {
       sortableItems.sort((a, b) => {
         let aValue = a[sortConfig.key];
@@ -91,6 +103,33 @@ export default function InventoryPage() {
     }
     return sortableItems;
   }, [stock, sortConfig]);
+
+  const stats = useMemo(() => {
+    let totalWeightKg = 0;
+    let totalValueRt = 0;
+    let scrapWeightKg = 0;
+
+    stock.forEach(item => {
+      // Calculate weight based on quantity, length(mm) to (m), and weightKgM
+      const itemWeight = (item.quantity * (item.length / 1000) * (item.weightKgM || 0));
+      totalWeightKg += itemWeight;
+
+      if (item.isScrap) {
+        scrapWeightKg += itemWeight;
+      }
+
+      // Calculate value
+      if (item.pricePerMeter && item.pricePerMeter > 0) {
+        totalValueRt += (item.quantity * (item.length / 1000) * item.pricePerMeter);
+      }
+    });
+
+    return {
+      totalTonnes: (totalWeightKg / 1000).toFixed(2),
+      totalValue: totalValueRt.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      scrapRatio: totalWeightKg > 0 ? ((scrapWeightKg / totalWeightKg) * 100).toFixed(1) : '0.0'
+    };
+  }, [stock]);
 
   if (loading) return (
     <div className="flex justify-center items-center h-screen bg-[var(--color-bg)]">
@@ -136,8 +175,63 @@ export default function InventoryPage() {
             </div>
           </div>
 
-          {/* Table Section */}
+          {/* KPI Dashboard */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+            <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Peso Total</span>
+                <Weight className="text-[var(--color-accent)] h-5 w-5" />
+              </div>
+              <p className="font-mono text-4xl font-black text-[var(--color-ink)] group-hover:text-white">{stats.totalTonnes} <span className="text-xl">TON</span></p>
+            </div>
+
+            <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Valor Imobilizado</span>
+                <CircleDollarSign className="text-[var(--color-accent)] h-5 w-5" />
+              </div>
+              <p className="font-mono text-3xl font-black text-[var(--color-ink)] group-hover:text-white pt-1">{stats.totalValue}</p>
+            </div>
+
+            <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Índice de Retalhos / Sucata</span>
+                <Shapes className="text-[var(--color-accent)] h-5 w-5" />
+              </div>
+              <div className="flex items-end gap-3 pt-1">
+                <p className="font-mono text-4xl font-black text-[var(--color-ink)] group-hover:text-white">{stats.scrapRatio}%</p>
+                <div className="w-full bg-[var(--color-bg)] h-2 mb-2">
+                  <div className="bg-[var(--color-accent)] h-2" style={{ width: `${stats.scrapRatio}%` }}></div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Table Section & Filter Tabs */}
           <div className="border-4 border-[var(--color-ink)] bg-white">
+
+            {/* Tabs */}
+            <div className="flex border-b-4 border-[var(--color-ink)] bg-[var(--color-bg)]">
+              <button
+                onClick={() => setFilterTab('all')}
+                className={`flex-1 py-4 font-mono font-black uppercase tracking-widest text-sm border-r-4 border-[var(--color-ink)] transition-colors ${filterTab === 'all' ? 'bg-[var(--color-ink)] text-[var(--color-bg)]' : 'hover:bg-[var(--color-ink)] hover:bg-opacity-10 text-[var(--color-ink)]'}`}
+              >
+                Visão Geral
+              </button>
+              <button
+                onClick={() => setFilterTab('bars')}
+                className={`flex-1 py-4 font-mono font-black uppercase tracking-widest text-sm border-r-4 border-[var(--color-ink)] transition-colors ${filterTab === 'bars' ? 'bg-[var(--color-ink)] text-[var(--color-bg)]' : 'hover:bg-[var(--color-ink)] hover:bg-opacity-10 text-[var(--color-ink)]'}`}
+              >
+                Barras Novas
+              </button>
+              <button
+                onClick={() => setFilterTab('scraps')}
+                className={`flex-1 py-4 font-mono font-black uppercase tracking-widest text-sm transition-colors ${filterTab === 'scraps' ? 'bg-[var(--color-ink)] text-[var(--color-bg)]' : 'hover:bg-[var(--color-ink)] hover:bg-opacity-10 text-[var(--color-ink)]'}`}
+              >
+                Retalhos (Otimizador)
+              </button>
+            </div>
+
             <div className="overflow-x-auto pb-4">
               <table className="min-w-full divide-y divide-none">
                 <thead className="bg-[var(--color-ink)] text-[var(--color-bg)]">
@@ -179,10 +273,19 @@ export default function InventoryPage() {
                     sortedStock.map((item) => (
                       <tr key={item.id} className="hover:bg-[var(--color-bg)] transition-colors group">
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
-                          <input
-                            type="text"
+                          <ProfileAutocomplete
                             value={item.material}
-                            onChange={(e) => updateItem(item.id, 'material', e.target.value)}
+                            onChange={(val) => updateItem(item.id, 'material', val)}
+                            onSelect={(profile: SteelProfile) => {
+                              setStock(current =>
+                                current.map(i => i.id === item.id ? {
+                                  ...i,
+                                  material: profile.name,
+                                  profileId: profile.id,
+                                  weightKgM: profile.weightKgM
+                                } : i)
+                              );
+                            }}
                             className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-mono font-black uppercase text-[var(--color-ink)] transition-colors p-2"
                           />
                         </td>

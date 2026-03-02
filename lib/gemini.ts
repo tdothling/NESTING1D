@@ -1,6 +1,6 @@
 import { CutRequest } from "./types";
-import { calculateWeightKgM } from "./steel-catalog";
-import type { ProfileCategory, ProfileDimensions } from "./steel-catalog";
+import { calculateWeightKgM, buildCustomProfile, searchProfiles, SteelProfile } from "./steel-catalog";
+import type { ProfileCategory, ProfileDimensions, CustomProfileInput } from "./steel-catalog";
 
 const VALID_TYPES: ProfileCategory[] = [
   'ue', 'u_simples', 'cartola', 'z', 'cantoneira',
@@ -57,16 +57,43 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
         }
         : undefined;
 
-      // Auto-calculate weight
+      // Auto-calculate weight and resolve catalog profile
       let weightKgM = item.weightKgM || 0;
+      let matchedProfileId: string | undefined = undefined;
+      let isCustomProfile = false;
+      let canonicalMaterialName = item.material;
 
       if (profileType === 'w_hp') {
         // W/HP: weight is in the profile name (e.g. W200x19.3 = 19.3 kg/m)
-        // The AI schema already extracts weightKgM from the name, so nothing extra needed
+        // Search catalog for a match just in case
+        const matches = searchProfiles(`W ${item.profileHeight}x${item.weightKgM}`, profileType);
+        if (matches.length > 0) {
+          matchedProfileId = matches[0].id;
+          canonicalMaterialName = matches[0].name;
+          weightKgM = matches[0].weightKgM;
+        }
       } else if (profileType && profileDimensions) {
-        // All profiles (including chapa): calculate from formula
+        // Build a custom profile representation first to calculate exact weight
         try {
-          weightKgM = calculateWeightKgM(profileType, profileDimensions);
+          const customParams: CustomProfileInput = { type: profileType, ...profileDimensions };
+          const calculated = buildCustomProfile(customParams);
+          weightKgM = calculated.weightKgM;
+
+          // Now, try to see if this "custom" shape actually exists in our standard catalog
+          // by searching with the dimensions/weight. 
+          // For a simpler phase 1, we just do a fuzzy search using the AI's raw material name
+          const matches = searchProfiles(item.material, profileType);
+
+          if (matches.length > 0 && Math.abs(matches[0].weightKgM - weightKgM) < 0.5) {
+            // Close enough match in weight, assume it's the standard catalog item
+            matchedProfileId = matches[0].id;
+            canonicalMaterialName = matches[0].name;
+            weightKgM = matches[0].weightKgM; // Use catalog precise weight
+          } else {
+            // Truly a custom profile (not in catalog)
+            isCustomProfile = true;
+            canonicalMaterialName = calculated.name;
+          }
         } catch {
           // Dimensions incomplete — leave weight as-is for manual edit
         }
@@ -74,7 +101,9 @@ export async function extractTableData(file: File): Promise<CutRequest[]> {
 
       return {
         id: crypto.randomUUID(),
-        material: item.material,
+        material: canonicalMaterialName, // Use standardized name
+        profileId: matchedProfileId,
+        isCustomProfile,
         profileType,
         profileDimensions,
         length: item.length,

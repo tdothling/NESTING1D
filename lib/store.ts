@@ -11,6 +11,7 @@ export const getStock = async (): Promise<StockItem[]> => {
   return data.map(item => ({
     id: item.id,
     material: item.material,
+    profileId: item.profile_id || undefined,
     length: item.length,
     quantity: item.quantity,
     weightKgM: item.weight_kg_m,
@@ -25,6 +26,7 @@ export const saveStock = async (stock: StockItem[]) => {
     stock.map(item => ({
       id: item.id,
       material: item.material,
+      profile_id: item.profileId || null,
       length: item.length,
       quantity: item.quantity,
       weight_kg_m: item.weightKgM || 0,
@@ -39,6 +41,7 @@ export const saveStock = async (stock: StockItem[]) => {
 export const saveStockItem = async (item: Omit<StockItem, 'id'>) => {
   const { error } = await supabase.from('stock').insert([{
     material: item.material,
+    profile_id: item.profileId || null,
     length: item.length,
     quantity: item.quantity,
     weight_kg_m: item.weightKgM || 0,

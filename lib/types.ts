@@ -3,6 +3,7 @@ import type { ProfileCategory, ProfileDimensions } from './steel-catalog';
 export interface StockItem {
   id: string;
   material: string;
+  profileId?: string; // Reference to steel-catalog profile id
   length: number;
   quantity: number;
   weightKgM?: number; // Weight in Kg per meter
@@ -14,6 +15,8 @@ export interface StockItem {
 export interface CutRequest {
   id: string;
   material: string;
+  profileId?: string; // Reference to steel-catalog profile id
+  isCustomProfile?: boolean; // True if calculated via builder
   profileType?: ProfileCategory;       // Steel profile type (ue, u_simples, z, etc.)
   profileDimensions?: ProfileDimensions; // Dimensions for weight calculation
   length: number;
