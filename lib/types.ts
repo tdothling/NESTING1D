@@ -35,6 +35,8 @@ export interface Cut {
 export interface BarResult {
   id: string;
   material: string; // Added material
+  profileId?: string;
+  weightKgM?: number;
   length: number;
   cuts: Cut[];
   waste: number;

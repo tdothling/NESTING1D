@@ -138,25 +138,40 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
   const MIN_SCRAP_LENGTH = 50;
 
   const existingScrapUpdates: Record<string, number> = {};
-  const newScrapsToAdd: Record<string, { material: string, length: number, quantity: number }> = {};
+  const newScrapsToAdd: Record<string, { material: string, profileId?: string, weightKgM?: number, length: number, quantity: number }> = {};
 
   for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
+      // Find the source item in stock to get its profileId and weight
+      let sourceProfileId: string | undefined = undefined;
+      let sourceWeightKgM: number = 0;
+
+      if (bar.sourceId && bar.sourceId !== 'new-standard') {
+        const sourceItem = stock.find(s => s.id === bar.sourceId);
+        if (sourceItem) {
+          sourceProfileId = sourceItem.profileId;
+          sourceWeightKgM = sourceItem.weightKgM || 0;
+        }
+      }
+
       const existingScrap = stock.find(s =>
         s.material === bar.material &&
         s.length === bar.reusableScrap &&
         s.isScrap === true &&
-        s.originProjectId === projectId
+        s.originProjectId === projectId &&
+        s.profileId === sourceProfileId
       );
 
       if (existingScrap) {
         existingScrapUpdates[existingScrap.id] = (existingScrapUpdates[existingScrap.id] ?? existingScrap.quantity) + 1;
         existingScrap.quantity += 1;
       } else {
-        const hash = `${bar.material}|${bar.reusableScrap}`;
+        const hash = `${bar.material}|${sourceProfileId || 'no-profile'}|${bar.reusableScrap}`;
         if (!newScrapsToAdd[hash]) {
           newScrapsToAdd[hash] = {
             material: bar.material,
+            profileId: sourceProfileId,
+            weightKgM: sourceWeightKgM,
             length: bar.reusableScrap,
             quantity: 1
           };
@@ -177,6 +192,8 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
     const scrapInfo = newScrapsToAdd[hash];
     await saveStockItem({
       material: scrapInfo.material,
+      profileId: scrapInfo.profileId,
+      weightKgM: scrapInfo.weightKgM,
       length: scrapInfo.length,
       quantity: scrapInfo.quantity,
       isScrap: true,

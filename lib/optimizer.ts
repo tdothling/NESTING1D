@@ -17,6 +17,7 @@ export function optimizeCuts(
   const requestsByMaterial: Record<string, CutRequest[]> = {};
   const materialWeights: Record<string, number> = {};
   const directPurchases: PurchaseItem[] = [];
+  const materialProfileIds: Record<string, string | undefined> = {};
 
   requests.forEach(req => {
     // Check if item skips optimization (e.g., Plates)
@@ -38,6 +39,9 @@ export function optimizeCuts(
     // Track linear weight if provided in the requests
     if (req.weightKgM && req.weightKgM > 0) {
       materialWeights[mat] = req.weightKgM;
+    }
+    if (req.profileId) {
+      materialProfileIds[mat] = req.profileId;
     }
   });
 
@@ -99,6 +103,8 @@ export function optimizeCuts(
             allResults.push({
               id: `${material.replace(/\s+/g, '-')}-split-full-${crypto.randomUUID()}`,
               material: material,
+              profileId: materialProfileIds[material],
+              weightKgM: materialWeights[material],
               length: source.totalLength,
               cuts: [{ length: standardLength, description: `${req.description || 'Peça Longa'} (Parte ${b + 1})` }],
               waste: source.totalLength - standardLength,
@@ -135,6 +141,8 @@ export function optimizeCuts(
     let openBins: {
       sourceId: string;
       material: string;
+      profileId?: string;
+      weightKgM?: number;
       totalLength: number;
       remainingLength: number;
       cuts: Cut[];
@@ -187,6 +195,8 @@ export function optimizeCuts(
           openBins.push({
             sourceId: source.sourceId,
             material: material,
+            profileId: materialProfileIds[material],
+            weightKgM: materialWeights[material],
             totalLength: source.totalLength,
             remainingLength: source.totalLength - item.length,
             cuts: [{ length: item.length, description: item.description }],
@@ -218,6 +228,8 @@ export function optimizeCuts(
       return {
         id: `${material.replace(/\s+/g, '-')}-${idx}-${crypto.randomUUID()}`,
         material: bin.material,
+        profileId: bin.profileId,
+        weightKgM: bin.weightKgM,
         length: bin.totalLength,
         cuts: bin.cuts,
         waste: bin.remainingLength,
