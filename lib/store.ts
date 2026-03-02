@@ -143,14 +143,14 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
   for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
       // Find the source item in stock to get its profileId and weight
-      let sourceProfileId: string | undefined = undefined;
-      let sourceWeightKgM: number = 0;
+      let sourceProfileId: string | undefined = bar.profileId;
+      let sourceWeightKgM: number = bar.weightKgM || 0;
 
       if (bar.sourceId && bar.sourceId !== 'new-standard') {
         const sourceItem = stock.find(s => s.id === bar.sourceId);
         if (sourceItem) {
-          sourceProfileId = sourceItem.profileId;
-          sourceWeightKgM = sourceItem.weightKgM || 0;
+          sourceProfileId = sourceItem.profileId || sourceProfileId;
+          sourceWeightKgM = sourceItem.weightKgM || sourceWeightKgM;
         }
       }
 
@@ -221,6 +221,8 @@ export const rollbackStock = async (projectId: string) => {
       } else {
         await saveStockItem({
           material: bar.material,
+          profileId: bar.profileId,
+          weightKgM: bar.weightKgM,
           length: bar.length,
           quantity: 1,
           isScrap: bar.isScrapUsed,
