@@ -337,6 +337,15 @@ export function optimizeCuts(
           for (let cutIdx = 0; cutIdx < bin.cuts.length; cutIdx++) {
             const cut = bin.cuts[cutIdx];
             const targetLength = cut.length;
+
+            // COST-BENEFIT CHECK: Don't compose if buying a full bar for this item
+            // would waste less than maxScrapLength. It's cheaper to buy the bar than
+            // to weld multiple scraps together.
+            // Example: 5994mm item in a 6000mm bar wastes only 6mm → just buy the bar.
+            // Example: 2090mm item in a 6000mm bar wastes 3910mm → composing makes sense.
+            const wasteIfNewBar = standardLength - targetLength;
+            if (wasteIfNewBar < options.maxScrapLength) continue;
+
             const excludeBins = new Set([binIdx]);
 
             const combo = findScrapCombination(targetLength, availableScraps, excludeBins);

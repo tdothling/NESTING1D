@@ -1,75 +1,63 @@
 import { optimizeCuts } from './lib/optimizer';
 
 // =========================================================
-// TEST: Composite Bar Composition (Welding Scraps)
+// TEST: Cost-Benefit Check for Composition
 // =========================================================
-// Scenario: User needs 10 bars of 8090mm. Standard bar = 6000mm.
-// Each 8090mm = 1 full bar (6000mm) + remainder (2090mm).
-// Remainders go to bin-packing: 2 × 2090 = 4180 from a 6000mm bar → 1817mm scrap.
-// WITHOUT composition: 1817mm goes to stock unused.
-// WITH composition: 1817mm + 273mm (from another scrap) = 2090mm → fewer new bars needed.
+// Scenario 1: 5994mm items → should NOT compose (waste = 6mm, trivial)
+// Scenario 2: 8090mm items → SHOULD compose remainders (waste = 3910mm per 2090mm item)
 
-const requests = [
-    { id: 'req-1', material: 'Perfil U 100x50', length: 8090, quantity: 10, description: 'Viga Principal' }
-];
+console.log('=== TESTE DE SENSO CRÍTICO ===\n');
 
-console.log('=== TESTE DE COMPOSIÇÃO COM SOLDAS ===\n');
+// Scenario 1: Items nearly filling a standard bar (5994mm of 6000mm)
+console.log('--- CENÁRIO 1: Peças de 5994mm (desperdício trivial) ---');
+const result1 = optimizeCuts(
+    [{ id: 'req-1', material: 'Perfil', length: 5994, quantity: 10, description: 'Coluna' }],
+    [],
+    { standardBarLengths: { 'Perfil': 6000 }, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 3 }
+);
 
-// Test WITHOUT composition (maxWeldsPerElement = 0)
-const resultNoComposite = optimizeCuts(requests, [], {
-    standardBarLengths: { 'Perfil U 100x50': 6000 },
-    defaultStandardLength: 6000,
-    kerf: 3,
-    maxScrapLength: 1000,
-    maxWeldsPerElement: 0
-});
+const composites1 = result1.results.filter(r => r.isComposite);
+console.log(`Compostas: ${composites1.length} (deve ser 0)`);
+console.log(`Barras a comprar: ${result1.purchaseList.map(p => `${p.quantity}x ${p.length}mm`).join(', ')}`);
+console.log(`Resultado: ${composites1.length === 0 ? '✅ CORRETO — usou barras inteiras' : '❌ ERRO — compôs desnecessariamente'}\n`);
 
-console.log('--- SEM COMPOSIÇÃO (maxWeldsPerElement=0) ---');
-console.log(`Total de barras: ${resultNoComposite.results.length}`);
-console.log(`Retalho aproveitável: ${resultNoComposite.totalReusableScrap}mm`);
-console.log(`Sucata real: ${resultNoComposite.totalTrueWaste}mm`);
-console.log(`Barras a comprar: ${resultNoComposite.purchaseList.map(p => `${p.quantity}x ${p.material} ${p.length}mm`).join(', ')}`);
+// Scenario 2: Items requiring splitting (8090mm = 6000 + 2090 remainder)
+console.log('--- CENÁRIO 2: Peças de 8090mm (remainders aproveitáveis) ---');
+const result2 = optimizeCuts(
+    [{ id: 'req-2', material: 'Perfil', length: 8090, quantity: 10, description: 'Viga' }],
+    [],
+    { standardBarLengths: { 'Perfil': 6000 }, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 3 }
+);
 
-const scrapBarsNo = resultNoComposite.results.filter(r => r.reusableScrap > 0);
-console.log(`Barras com retalho: ${scrapBarsNo.length}`);
-scrapBarsNo.forEach(b => {
-    console.log(`  - ${b.length}mm: cortes [${b.cuts.map(c => c.length).join(', ')}] → sobra ${b.reusableScrap}mm`);
-});
+const composites2 = result2.results.filter(r => r.isComposite);
+const purchaseNo = optimizeCuts(
+    [{ id: 'req-2', material: 'Perfil', length: 8090, quantity: 10, description: 'Viga' }],
+    [],
+    { standardBarLengths: { 'Perfil': 6000 }, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 0 }
+).purchaseList.reduce((s, p) => s + p.quantity, 0);
+const purchaseYes = result2.purchaseList.reduce((s, p) => s + p.quantity, 0);
 
-console.log('\n--- COM COMPOSIÇÃO (maxWeldsPerElement=3) ---');
-
-// Test WITH composition
-const resultComposite = optimizeCuts(requests, [], {
-    standardBarLengths: { 'Perfil U 100x50': 6000 },
-    defaultStandardLength: 6000,
-    kerf: 3,
-    maxScrapLength: 1000,
-    maxWeldsPerElement: 3
-});
-
-console.log(`Total de barras: ${resultComposite.results.length}`);
-console.log(`Retalho aproveitável: ${resultComposite.totalReusableScrap}mm`);
-console.log(`Sucata real: ${resultComposite.totalTrueWaste}mm`);
-console.log(`Barras a comprar: ${resultComposite.purchaseList.map(p => `${p.quantity}x ${p.material} ${p.length}mm`).join(', ')}`);
-
-const compositeBars = resultComposite.results.filter(r => r.isComposite);
-console.log(`Barras compostas (soldadas): ${compositeBars.length}`);
-compositeBars.forEach(b => {
-    console.log(`  - ${b.length}mm SOLDADA: partes [${b.compositeParts?.join(' + ')}mm]`);
-});
-
-const scrapBars = resultComposite.results.filter(r => r.reusableScrap > 0);
-console.log(`Barras com retalho restante: ${scrapBars.length}`);
-scrapBars.forEach(b => {
-    console.log(`  - ${b.length}mm: cortes [${b.cuts.map(c => c.length).join(', ')}] → sobra ${b.reusableScrap}mm`);
-});
-
-// Summary comparison
-console.log('\n=== COMPARAÇÃO ===');
-const purchaseNo = resultNoComposite.purchaseList.reduce((sum, p) => sum + p.quantity, 0);
-const purchaseYes = resultComposite.purchaseList.reduce((sum, p) => sum + p.quantity, 0);
-console.log(`Barras a comprar SEM composição: ${purchaseNo}`);
-console.log(`Barras a comprar COM composição: ${purchaseYes}`);
+console.log(`Compostas: ${composites2.length} (deve ser > 0)`);
+console.log(`Barras sem composição: ${purchaseNo}`);
+console.log(`Barras com composição: ${purchaseYes}`);
 console.log(`Economia: ${purchaseNo - purchaseYes} barras`);
-console.log(`Retalho para estoque SEM: ${resultNoComposite.totalReusableScrap}mm`);
-console.log(`Retalho para estoque COM: ${resultComposite.totalReusableScrap}mm`);
+composites2.forEach(b => console.log(`  🔥 ${b.length}mm = ${b.compositeParts?.join('mm + ')}mm`));
+console.log(`Resultado: ${composites2.length > 0 ? '✅ CORRETO — compôs remainder' : '❌ ERRO — não aproveitou retalhos'}\n`);
+
+// Scenario 3: Mixed — 5994 + 2090 together
+console.log('--- CENÁRIO 3: Mix (5994mm + 8090mm) ---');
+const result3 = optimizeCuts(
+    [
+        { id: 'req-3a', material: 'Perfil', length: 5994, quantity: 5, description: 'Coluna' },
+        { id: 'req-3b', material: 'Perfil', length: 8090, quantity: 5, description: 'Viga' }
+    ],
+    [],
+    { standardBarLengths: { 'Perfil': 6000 }, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 3 }
+);
+
+const composites3 = result3.results.filter(r => r.isComposite);
+const bars5994 = result3.results.filter(r => !r.isComposite && r.cuts.some(c => c.length === 5994));
+console.log(`Barras de 5994mm (inteiras): ${bars5994.length} (deve ser 5 — todas inteiras)`);
+console.log(`Compostas (de remainder): ${composites3.length}`);
+composites3.forEach(b => console.log(`  🔥 ${b.length}mm = ${b.compositeParts?.join('mm + ')}mm`));
+console.log(`Resultado: ${bars5994.length === 5 && composites3.length > 0 ? '✅ CORRETO — 5994 inteiras + remainders compostos' : '⚠️ VERIFICAR resultados'}`);
