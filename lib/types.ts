@@ -70,6 +70,7 @@ export interface OptimizationResult {
 export interface ProjectSettings {
   standardBarLengths: Record<string, number>;
   maxScrapLength: number;
+  kerf: number;
 }
 
 export interface Project {

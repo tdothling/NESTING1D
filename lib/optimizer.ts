@@ -11,7 +11,7 @@ interface OptimizerOptions {
 export function optimizeCuts(
   requests: CutRequest[],
   stock: StockItem[],
-  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 3, maxScrapLength: 1000, maxWeldsPerElement: 3 }
+  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 0, maxScrapLength: 1000, maxWeldsPerElement: 3 }
 ): { results: BarResult[]; remainingStock: StockItem[]; itemsNotFit: CutRequest[]; purchaseList: PurchaseItem[]; totalTrueWaste: number; totalTrueWasteKg: number; totalReusableScrap: number } {
 
   const maxWeldsPerElement = options.maxWeldsPerElement ?? 3;

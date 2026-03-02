@@ -29,6 +29,7 @@ function OptimizeContent() {
   const [uniqueMaterials, setUniqueMaterials] = useState<string[]>([]);
   const [autoUpdateStock, setAutoUpdateStock] = useState(true);
   const [maxScrapLength, setMaxScrapLength] = useState(1000);
+  const [kerf, setKerf] = useState(0);
   const [globalMultiplier, setGlobalMultiplier] = useState(1);
 
   useEffect(() => {
@@ -46,6 +47,7 @@ function OptimizeContent() {
             if (loadedProject.settings) {
               setStandardBarLengths(loadedProject.settings.standardBarLengths);
               setMaxScrapLength(loadedProject.settings.maxScrapLength);
+              if (loadedProject.settings.kerf !== undefined) setKerf(loadedProject.settings.kerf);
             }
             if (loadedProject.result) {
               setResult(loadedProject.result);
@@ -129,7 +131,7 @@ function OptimizeContent() {
       const settings = {
         standardBarLengths,
         defaultStandardLength: 6000,
-        kerf: 3,
+        kerf: kerf,
         maxScrapLength: maxScrapLength
       };
 
@@ -196,7 +198,8 @@ function OptimizeContent() {
         result,
         settings: {
           standardBarLengths,
-          maxScrapLength
+          maxScrapLength,
+          kerf
         }
       };
 
@@ -376,6 +379,8 @@ function OptimizeContent() {
                 setStandardBarLengths={setStandardBarLengths}
                 maxScrapLength={maxScrapLength}
                 setMaxScrapLength={setMaxScrapLength}
+                kerf={kerf}
+                setKerf={setKerf}
                 onBack={() => setStep('upload')}
                 onOptimize={handleOptimize}
                 loading={loading}

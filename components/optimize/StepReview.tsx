@@ -22,6 +22,8 @@ interface StepReviewProps {
     setStandardBarLengths: React.Dispatch<React.SetStateAction<Record<string, number>>>;
     maxScrapLength: number;
     setMaxScrapLength: (n: number) => void;
+    kerf: number;
+    setKerf: (n: number) => void;
     onBack: () => void;
     onOptimize: () => void;
     loading: boolean;
@@ -186,6 +188,8 @@ export function StepReview({
     setStandardBarLengths,
     maxScrapLength,
     setMaxScrapLength,
+    kerf,
+    setKerf,
     onBack,
     onOptimize,
     loading
@@ -407,6 +411,30 @@ export function StepReview({
                                         placeholder="1000"
                                         value={maxScrapLength}
                                         onChange={(e) => setMaxScrapLength(Number(e.target.value))}
+                                    />
+                                    <div className="bg-[var(--color-ink)] text-white font-black text-sm flex items-center px-4 border-y-2 border-r-2 border-[var(--color-ink)]">
+                                        MM
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-[var(--color-bg)] p-5 border-2 border-[var(--color-ink)] max-w-md">
+                                <label htmlFor="kerf" className="block text-sm font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 flex items-center">
+                                    <span className="w-2 h-2 bg-[var(--color-ink)] inline-block mr-2"></span>
+                                    ESPESSURA DO DISCO DE CORTE
+                                </label>
+                                <p className="text-xs font-bold text-[var(--color-ink)] opacity-70 mb-4 uppercase tracking-widest leading-relaxed">
+                                    DEFINA 0 PARA DESCONSIDERAR A ESPESSURA DO CORTE (PERFIS SOLDADOS).
+                                </p>
+                                <div className="flex">
+                                    <input
+                                        type="number"
+                                        id="kerf"
+                                        min="0"
+                                        className="flex-1 bg-white border-2 border-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:ring-0 rounded-none text-lg font-black px-3 py-2 text-right"
+                                        placeholder="0"
+                                        value={kerf}
+                                        onChange={(e) => setKerf(Math.max(0, Number(e.target.value)))}
                                     />
                                     <div className="bg-[var(--color-ink)] text-white font-black text-sm flex items-center px-4 border-y-2 border-r-2 border-[var(--color-ink)]">
                                         MM
