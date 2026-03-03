@@ -54,6 +54,7 @@ export interface PurchaseItem {
   material: string;
   length: number;
   quantity: number;
+  width?: number; // Largura (mm) — only for chapas/2D items
 }
 
 export interface OptimizationResult {

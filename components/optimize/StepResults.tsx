@@ -45,7 +45,7 @@ export function StepResults({
         : 0;
 
     return (
-        <div className="space-y-8 font-mono max-w-7xl mx-auto">
+        <div className="space-y-8 font-mono max-w-[1600px] mx-auto">
             {/* Header section */}
             <div className="mb-6 border-l-8 border-[var(--color-ink)] pl-4">
                 <h2 className="text-3xl font-black uppercase tracking-widest text-[var(--color-ink)] block">
@@ -118,6 +118,7 @@ export function StepResults({
                                 <thead className="bg-[var(--color-bg)] border-b-2 border-[var(--color-ink)]">
                                     <tr>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)]">MATERIAL</th>
+                                        <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)]">LARGURA (MM)</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)]">COMPRIMENTO (MM)</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest">QUANTIDADE</th>
                                     </tr>
@@ -126,6 +127,7 @@ export function StepResults({
                                     {result.purchaseList.map((item, idx) => (
                                         <tr key={idx} className="hover:bg-[var(--color-bg)] transition-colors">
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-bold text-[var(--color-ink)] uppercase border-r-2 border-[var(--color-ink)]">{item.material}</td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-[var(--color-ink)] border-r-2 border-[var(--color-ink)]">{item.width ? item.width : '—'}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm font-black text-[var(--color-ink)] border-r-2 border-[var(--color-ink)]">{item.length}</td>
                                             <td className="px-6 py-4 whitespace-nowrap text-lg font-black text-[var(--color-accent)]">{item.quantity}</td>
                                         </tr>
@@ -240,8 +242,8 @@ export function StepResults({
                                             key={idx}
                                             style={{ width: `${(cut.length / bar.length) * 100}%` }}
                                             className={`h-full flex items-center justify-center text-white text-xs font-mono relative group transition-colors cursor-crosshair ${cut.isWeld
-                                                    ? 'bg-orange-700 hover:bg-orange-500 border-r-2 border-dashed border-orange-300'
-                                                    : 'bg-[var(--color-ink)] hover:bg-[var(--color-accent)] border-r-2 border-[var(--color-bg)]'
+                                                ? 'bg-orange-700 hover:bg-orange-500 border-r-2 border-dashed border-orange-300'
+                                                : 'bg-[var(--color-ink)] hover:bg-[var(--color-accent)] border-r-2 border-[var(--color-bg)]'
                                                 }`}
                                         >
                                             <span className="truncate px-1 font-black">{cut.length}</span>
