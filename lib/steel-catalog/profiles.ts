@@ -174,3 +174,12 @@ export const DIMENSION_LABELS: Record<string, string> = {
     diameter: 'Diâmetro (Ø)',
     flangeThickness: 'Esp. Mesa',
 };
+
+// Context-specific label overrides per profile type
+export const DIMENSION_LABEL_OVERRIDES: Partial<Record<ProfileCategory, Record<string, string>>> = {
+    'chapa': {
+        width: 'Largura (mm)',
+        height: 'Comprimento (mm)',
+        thickness: 'Espessura (mm)',
+    },
+};

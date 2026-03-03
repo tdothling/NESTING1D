@@ -5,6 +5,7 @@ import {
     PROFILE_LABELS,
     REQUIRED_DIMENSIONS,
     DIMENSION_LABELS,
+    DIMENSION_LABEL_OVERRIDES,
     calculateWeightKgM,
 } from '@/lib/steel-catalog';
 import type { ProfileCategory, ProfileDimensions } from '@/lib/steel-catalog';
@@ -130,21 +131,24 @@ function ProfileDimensionEditor({
                     ) : (
                         /* Other profiles: dimension inputs */
                         <div className="grid grid-cols-2 gap-3 bg-white border-2 border-[var(--color-ink)] p-3">
-                            {requiredDims.map(dimKey => (
-                                <div key={dimKey}>
-                                    <label className="block text-[10px] font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 truncate" title={DIMENSION_LABELS[dimKey]}>
-                                        {DIMENSION_LABELS[dimKey]}
-                                    </label>
-                                    <input
-                                        type="number"
-                                        step="0.01"
-                                        value={req.profileDimensions?.[dimKey] || ''}
-                                        placeholder="0"
-                                        onChange={(e) => handleDimensionChange(dimKey, Number(e.target.value))}
-                                        className="block w-full border-2 border-[var(--color-ink)] bg-transparent rounded-none text-base py-2 px-3 focus:ring-0 focus:border-[var(--color-accent)] font-black outline-none transition-colors"
-                                    />
-                                </div>
-                            ))}
+                            {requiredDims.map(dimKey => {
+                                const label = (req.profileType && DIMENSION_LABEL_OVERRIDES[req.profileType]?.[dimKey]) || DIMENSION_LABELS[dimKey];
+                                return (
+                                    <div key={dimKey}>
+                                        <label className="block text-[10px] font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 truncate" title={label}>
+                                            {label}
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={req.profileDimensions?.[dimKey] || ''}
+                                            placeholder="0"
+                                            onChange={(e) => handleDimensionChange(dimKey, Number(e.target.value))}
+                                            className="block w-full border-2 border-[var(--color-ink)] bg-transparent rounded-none text-base py-2 px-3 focus:ring-0 focus:border-[var(--color-accent)] font-black outline-none transition-colors"
+                                        />
+                                    </div>
+                                );
+                            })}
                         </div>
                     )}
 
