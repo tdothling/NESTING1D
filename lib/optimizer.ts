@@ -280,17 +280,49 @@ export function optimizeCuts(
 
         const minPartLength = options.maxScrapLength > 0 ? options.maxScrapLength : 1;
 
+        const getPermutations = (arr: ScrapSource[]): ScrapSource[][] => {
+          if (arr.length <= 1) return [arr];
+          const result: ScrapSource[][] = [];
+          for (let i = 0; i < arr.length; i++) {
+            const current = arr[i];
+            const remaining = arr.slice(0, i).concat(arr.slice(i + 1));
+            const subPermutations = getPermutations(remaining);
+            for (const sub of subPermutations) {
+              result.push([current, ...sub]);
+            }
+          }
+          return result;
+        };
+
+        const tryCombo = (scraps: ScrapSource[], kerfs: number): { usedScraps: ScrapSource[]; parts: number[] } | null => {
+          const perms = getPermutations(scraps);
+          for (const perm of perms) {
+            const parts: number[] = [];
+            let remainingTarget = targetLength;
+
+            // All but the last scrap are completely used
+            for (let i = 0; i < perm.length - 1; i++) {
+              parts.push(perm[i].length);
+              remainingTarget -= perm[i].length;
+            }
+
+            // The last scrap provides the remaining needed target length
+            const lastPart = remainingTarget;
+
+            if (lastPart >= minPartLength && (lastPart + kerfs * options.kerf) <= perm[perm.length - 1].length) {
+              parts.push(lastPart);
+              return { usedScraps: perm, parts };
+            }
+          }
+          return null;
+        };
+
         // Try 2 scraps (1 weld)
         for (let i = 0; i < filtered.length; i++) {
           for (let j = i + 1; j < filtered.length; j++) {
-            const total = filtered[i].length + filtered[j].length;
-            const needed = targetLength + options.kerf; // 1 weld joint
-            if (total >= needed) {
-              const part1 = filtered[i].length;
-              const part2 = targetLength - part1;
-              if (part2 >= minPartLength && (part2 + options.kerf) <= filtered[j].length) {
-                return { usedScraps: [filtered[i], filtered[j]], parts: [part1, part2] };
-              }
+            if (filtered[i].length + filtered[j].length >= targetLength + options.kerf) {
+              const res = tryCombo([filtered[i], filtered[j]], 1);
+              if (res) return res;
             }
           }
         }
@@ -300,15 +332,9 @@ export function optimizeCuts(
           for (let i = 0; i < filtered.length; i++) {
             for (let j = i + 1; j < filtered.length; j++) {
               for (let k = j + 1; k < filtered.length; k++) {
-                const total = filtered[i].length + filtered[j].length + filtered[k].length;
-                const needed = targetLength + options.kerf * 2;
-                if (total >= needed) {
-                  const p1 = filtered[i].length;
-                  const p2 = filtered[j].length;
-                  const p3 = targetLength - p1 - p2;
-                  if (p3 >= minPartLength && (p3 + options.kerf) <= filtered[k].length) {
-                    return { usedScraps: [filtered[i], filtered[j], filtered[k]], parts: [p1, p2, p3] };
-                  }
+                if (filtered[i].length + filtered[j].length + filtered[k].length >= targetLength + options.kerf * 2) {
+                  const res = tryCombo([filtered[i], filtered[j], filtered[k]], 2);
+                  if (res) return res;
                 }
               }
             }
@@ -321,16 +347,9 @@ export function optimizeCuts(
             for (let j = i + 1; j < filtered.length; j++) {
               for (let k = j + 1; k < filtered.length; k++) {
                 for (let l = k + 1; l < filtered.length; l++) {
-                  const total = filtered[i].length + filtered[j].length + filtered[k].length + filtered[l].length;
-                  const needed = targetLength + options.kerf * 3;
-                  if (total >= needed) {
-                    const p1 = filtered[i].length;
-                    const p2 = filtered[j].length;
-                    const p3 = filtered[k].length;
-                    const p4 = targetLength - p1 - p2 - p3;
-                    if (p4 >= minPartLength && (p4 + options.kerf) <= filtered[l].length) {
-                      return { usedScraps: [filtered[i], filtered[j], filtered[k], filtered[l]], parts: [p1, p2, p3, p4] };
-                    }
+                  if (filtered[i].length + filtered[j].length + filtered[k].length + filtered[l].length >= targetLength + options.kerf * 3) {
+                    const res = tryCombo([filtered[i], filtered[j], filtered[k], filtered[l]], 3);
+                    if (res) return res;
                   }
                 }
               }
@@ -375,7 +394,8 @@ export function optimizeCuts(
               for (let s = 0; s < combo.usedScraps.length; s++) {
                 const scrap = combo.usedScraps[s];
                 const partLen = combo.parts[s];
-                const kerfCharge = s > 0 ? options.kerf : 0;
+                // Only the final cut from the last scrap absorbs the weld/cut kerfs
+                const kerfCharge = (s === combo.usedScraps.length - 1) ? (combo.usedScraps.length - 1) * options.kerf : 0;
                 openBins[scrap.binIndex].remainingLength -= (partLen + kerfCharge);
               }
 
