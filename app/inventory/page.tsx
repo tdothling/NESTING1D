@@ -157,24 +157,26 @@ export default function InventoryPage() {
     let totalWeightKg = 0;
     let totalValueRt = 0;
     let scrapWeightKg = 0;
+    let totalScrapValueRt = 0;
 
     stock.forEach(item => {
       const itemWeight = (item.quantity * (item.length / 1000) * (item.weightKgM || 0));
       totalWeightKg += itemWeight;
 
+      const itemValue = item.pricePerKg && item.pricePerKg > 0 ? itemWeight * item.pricePerKg : 0;
+
       if (item.isScrap) {
         scrapWeightKg += itemWeight;
+        totalScrapValueRt += itemValue;
       }
 
-      // Value = weight_kg × pricePerKg
-      if (item.pricePerKg && item.pricePerKg > 0) {
-        totalValueRt += itemWeight * item.pricePerKg;
-      }
+      totalValueRt += itemValue;
     });
 
     return {
       totalTonnes: (totalWeightKg / 1000).toFixed(2),
       totalValue: totalValueRt.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
+      scrapValue: totalScrapValueRt.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }),
       scrapRatio: totalWeightKg > 0 ? ((scrapWeightKg / totalWeightKg) * 100).toFixed(1) : '0.0'
     };
   }, [stock]);
@@ -233,12 +235,23 @@ export default function InventoryPage() {
               <p className="font-mono text-4xl font-black text-[var(--color-ink)] group-hover:text-white">{stats.totalTonnes} <span className="text-xl">TON</span></p>
             </div>
 
-            <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
-              <div className="flex justify-between items-start">
+            <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors relative overflow-hidden">
+              <div className="flex justify-between items-start relative z-10">
                 <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Valor Imobilizado</span>
                 <CircleDollarSign className="text-[var(--color-accent)] h-5 w-5" />
               </div>
-              <p className="font-mono text-3xl font-black text-[var(--color-ink)] group-hover:text-white pt-1">{stats.totalValue}</p>
+
+              <div className="relative z-10 pt-1">
+                <p className="font-mono text-3xl font-black text-[var(--color-ink)] group-hover:text-white flex items-baseline gap-2">
+                  {stats.totalValue}
+                </p>
+                <div className="mt-2 flex items-center justify-between border-t-2 border-dashed border-[var(--color-ink)] border-opacity-20 group-hover:border-white group-hover:border-opacity-30 pt-2">
+                  <span className="font-mono text-[10px] font-black uppercase tracking-widest text-[var(--color-accent)]">EM RETALHOS:</span>
+                  <span className="font-mono text-xs font-black text-[var(--color-ink)] group-hover:text-white bg-[var(--color-bg)] group-hover:bg-[var(--color-ink)] group-hover:border-2 group-hover:border-white px-2 py-0.5">
+                    {stats.scrapValue}
+                  </span>
+                </div>
+              </div>
             </div>
 
             <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
