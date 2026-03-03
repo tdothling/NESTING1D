@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { getProjects, removeProject } from '@/lib/store';
+import { getProjects, removeProject, rollbackStock } from '@/lib/store';
 import { Project } from '@/lib/types';
 import { Trash2, ExternalLink, Printer, Search } from 'lucide-react';
 import { toast } from 'sonner';
@@ -33,9 +33,10 @@ export default function ProjectsPage() {
 
     const handleDelete = async (id: string, e: React.MouseEvent) => {
         e.preventDefault(); // Prevent navigating if wrapped in a link
-        if (!confirm('Tem certeza que deseja excluir pste projeto? Esta ação não pode ser desfeita.')) return;
+        if (!confirm('Tem certeza que deseja excluir este projeto? O estoque consumido será devolvido.')) return;
 
         try {
+            await rollbackStock(id);
             await removeProject(id);
             setProjects(projects.filter(p => p.id !== id));
             toast.success('Projeto excluído com sucesso');

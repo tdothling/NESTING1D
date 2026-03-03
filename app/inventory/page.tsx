@@ -61,14 +61,24 @@ export default function InventoryPage() {
     const itemsToDelete: string[] = [];
 
     stock.forEach(item => {
+      if (item.quantity <= 0) {
+        itemsToDelete.push(item.id);
+        return;
+      }
+
+      const price1 = item.pricePerKg || 0;
+      const weight1 = item.weightKgM || 0;
+
       // Find if we already have an identical item in our merged list
-      const existingIdx = mergedStock.findIndex(m =>
-        m.material === item.material &&
-        m.length === item.length &&
-        m.isScrap === item.isScrap &&
-        m.pricePerKg === item.pricePerKg &&
-        m.weightKgM === item.weightKgM
-      );
+      const existingIdx = mergedStock.findIndex(m => {
+        const price2 = m.pricePerKg || 0;
+        const weight2 = m.weightKgM || 0;
+        return m.material === item.material &&
+          m.length === item.length &&
+          m.isScrap === item.isScrap &&
+          price2 === price1 &&
+          weight2 === weight1;
+      });
 
       if (existingIdx >= 0 && mergedStock[existingIdx].id !== item.id) {
         // We found a duplicate! Sum the quantity and mark the current ID for deletion

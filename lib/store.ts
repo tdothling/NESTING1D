@@ -39,6 +39,7 @@ export const saveStock = async (stock: StockItem[]) => {
 };
 
 export const saveStockItem = async (item: Omit<StockItem, 'id'>) => {
+  if (item.quantity <= 0) return;
   const { error } = await supabase.from('stock').insert([{
     material: item.material,
     profile_id: item.profileId || null,
@@ -158,7 +159,6 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
         s.material === bar.material &&
         s.length === bar.reusableScrap &&
         s.isScrap === true &&
-        s.originProjectId === projectId &&
         s.profileId === sourceProfileId
       );
 
@@ -197,7 +197,7 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
       length: scrapInfo.length,
       quantity: scrapInfo.quantity,
       isScrap: true,
-      originProjectId: projectId
+      originProjectId: undefined
     });
   }
 };
@@ -207,11 +207,45 @@ export const rollbackStock = async (projectId: string) => {
   if (!pData || !pData.result_json) return;
   const result: OptimizationResult = pData.result_json;
 
-  // Remove scraps generated
-  await supabase.from('stock').delete().eq('is_scrap', true).eq('origin_project_id', projectId);
-
-  // Add back consumed items
+  // 1. Remove scraps generated
   const stock = await getStock();
+  const MIN_SCRAP_LENGTH = 50;
+
+  const scrapsToRemove: Record<string, number> = {};
+  for (const bar of result.bars) {
+    if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
+      let sourceProfileId: string | undefined = bar.profileId;
+      if (bar.sourceId && bar.sourceId !== 'new-standard') {
+        const sourceItem = stock.find(s => s.id === bar.sourceId);
+        if (sourceItem) sourceProfileId = sourceItem.profileId || sourceProfileId;
+      }
+
+      const existingScrap = stock.find(s =>
+        s.material === bar.material &&
+        s.length === bar.reusableScrap &&
+        s.isScrap === true &&
+        s.profileId === sourceProfileId
+      );
+      if (existingScrap) {
+        scrapsToRemove[existingScrap.id] = (scrapsToRemove[existingScrap.id] ?? 0) + 1;
+      }
+    }
+  }
+
+  for (const id of Object.keys(scrapsToRemove)) {
+    const item = stock.find(s => s.id === id);
+    if (item) {
+      const newQty = item.quantity - scrapsToRemove[id];
+      if (newQty <= 0) {
+        await supabase.from('stock').delete().eq('id', id);
+      } else {
+        await updateStockQuantity(id, newQty);
+        item.quantity = newQty; // update local ref
+      }
+    }
+  }
+
+  // 2. Add back consumed items
   for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
       const existing = stock.find(s => s.id === bar.sourceId);
