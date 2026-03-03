@@ -45,6 +45,15 @@ export function StepResults({
         }, 0)
         : 0;
 
+    // Calculate value lost in pure scrap (sucata)
+    const scrapCost = result.bars.reduce((total, bar) => {
+        const stockItem = stock.find(s => s.material.trim().toLowerCase() === bar.material.trim().toLowerCase() && s.pricePerKg && s.pricePerKg > 0);
+        if (stockItem && stockItem.pricePerKg && bar.trueWasteKg > 0) {
+            return total + bar.trueWasteKg * stockItem.pricePerKg;
+        }
+        return total;
+    }, 0);
+
     return (
         <div className="space-y-8 font-mono max-w-[1600px] mx-auto">
             {/* Header section */}
@@ -65,14 +74,24 @@ export function StepResults({
                         <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">TOTAL DE BARRAS</dt>
                         <dd className="text-4xl font-black text-[var(--color-ink)]">{result.totalStockUsed}</dd>
                     </div>
-                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
-                        <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">SUCATA (PERDA REAL)</dt>
-                        <dd className="text-4xl font-black text-[#f9411d]">
-                            {(result.totalTrueWaste / 1000).toFixed(2)} <span className="text-xl">M</span>
-                            {result.totalTrueWasteKg > 0 && (
-                                <span className="block text-sm font-bold text-[#f9411d] opacity-80 mt-1">~ {result.totalTrueWasteKg} KG</span>
-                            )}
-                        </dd>
+                    <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)] flex flex-col justify-between">
+                        <div>
+                            <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">SUCATA (PERDA REAL)</dt>
+                            <dd className="text-4xl font-black text-[#f9411d]">
+                                {(result.totalTrueWaste / 1000).toFixed(2)} <span className="text-xl">M</span>
+                                {result.totalTrueWasteKg > 0 && (
+                                    <span className="block text-sm font-bold text-[#f9411d] opacity-80 mt-1">~ {result.totalTrueWasteKg.toFixed(2)} KG</span>
+                                )}
+                            </dd>
+                        </div>
+                        {scrapCost > 0 && (
+                            <div className="mt-3 pt-2 border-t-2 border-dashed border-[#f9411d]/20">
+                                <span className="text-[10px] font-black uppercase tracking-widest text-[#f9411d] opacity-80 block mb-0.5">PERDA FINANCEIRA:</span>
+                                <span className="inline-block text-sm font-black text-[#f9411d] bg-[#f9411d]/10 px-2 py-1 border border-[#f9411d]/20">
+                                    R$ {scrapCost.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                </span>
+                            </div>
+                        )}
                     </div>
                     <div className="bg-[var(--color-bg)] p-4 border-2 border-[var(--color-ink)]">
                         <dt className="text-xs font-black text-[var(--color-ink)] uppercase tracking-widest mb-2 opacity-70">RETALHO APROVEITÁVEL</dt>
