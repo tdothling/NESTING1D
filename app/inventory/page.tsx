@@ -224,7 +224,7 @@ export default function InventoryPage() {
           </div>
 
           {/* KPI Dashboard */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 mb-8">
+          <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 mb-8">
             <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
               <div className="flex justify-between items-start">
                 <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Peso Total</span>
@@ -243,7 +243,7 @@ export default function InventoryPage() {
 
             <div className="border-4 border-[var(--color-ink)] bg-white p-6 space-y-2 group hover:bg-[var(--color-ink)] transition-colors">
               <div className="flex justify-between items-start">
-                <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Índice de Retalhos / Sucata</span>
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-white opacity-70">Aproveitamento</span>
                 <Shapes className="text-[var(--color-accent)] h-5 w-5" />
               </div>
               <div className="flex items-end gap-3 pt-1">
@@ -252,6 +252,32 @@ export default function InventoryPage() {
                   <div className="bg-[var(--color-accent)] h-2" style={{ width: `${stats.scrapRatio}%` }}></div>
                 </div>
               </div>
+            </div>
+
+            {/* Bulk Price Updater */}
+            <div className="border-4 border-[var(--color-ink)] bg-[var(--color-accent)] p-6 space-y-2">
+              <div className="flex justify-between items-start">
+                <span className="font-mono text-xs font-bold uppercase tracking-widest text-white opacity-90">Preço Base (R$/KG)</span>
+                <CircleDollarSign className="text-white h-5 w-5" />
+              </div>
+              <div className="flex items-center pt-1 gap-2">
+                <span className="font-mono text-xl font-black text-white">R$</span>
+                <input
+                  type="number"
+                  step="0.01"
+                  placeholder="0.00"
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    if (val > 0) {
+                      setStock(stock.map(item => ({ ...item, pricePerKg: val })));
+                    }
+                  }}
+                  className="block w-full bg-white border-2 border-transparent focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 text-2xl font-black font-mono text-[var(--color-ink)] p-2 text-right shadow-[4px_4px_0px_0px_var(--color-ink)]"
+                />
+              </div>
+              <p className="font-mono text-[9px] font-bold uppercase tracking-widest text-white mt-2 leading-tight">
+                APLICA ESTE VALOR A TODOS OS ITENS ABAIXO DE UMA VEZ.
+              </p>
             </div>
           </div>
 
