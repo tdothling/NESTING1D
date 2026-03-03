@@ -273,9 +273,10 @@ function OptimizeContent() {
     if (result.purchaseList.length === 0) {
       doc.text('Nenhuma compra necessária para este projeto.', 14, 45);
     } else {
-      const tableColumn = ["Material", "Comprimento (mm)", "Quantidade"];
+      const tableColumn = ["Material", "Largura (mm)", "Comprimento (mm)", "Quantidade"];
       const tableRows = result.purchaseList.map(item => [
         item.material,
+        item.width ? item.width.toString() : '—',
         item.length.toString(),
         item.quantity.toString()
       ]);

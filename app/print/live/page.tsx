@@ -147,8 +147,8 @@ export default function PrintLivePage() {
                                                     key={cutIdx}
                                                     style={{ width: `${(cut.length / bar.length) * 100}%` }}
                                                     className={`h-full flex items-center justify-center text-white text-sm font-bold ${cut.isWeld
-                                                            ? 'bg-orange-700 border-r-2 border-dashed border-orange-300'
-                                                            : 'bg-gray-800 border-r-2 border-white'
+                                                        ? 'bg-orange-700 border-r-2 border-dashed border-orange-300'
+                                                        : 'bg-gray-800 border-r-2 border-white'
                                                         }`}
                                                 >
                                                     {cut.length}
@@ -204,6 +204,7 @@ export default function PrintLivePage() {
                             <thead>
                                 <tr className="bg-gray-100">
                                     <th className="border border-gray-300 px-4 py-2 text-left">Material</th>
+                                    <th className="border border-gray-300 px-4 py-2 text-left">Largura (mm)</th>
                                     <th className="border border-gray-300 px-4 py-2 text-left">Comprimento (mm)</th>
                                     <th className="border border-gray-300 px-4 py-2 text-left">Quantidade</th>
                                 </tr>
@@ -212,6 +213,7 @@ export default function PrintLivePage() {
                                 {result.purchaseList.map((item, idx) => (
                                     <tr key={idx}>
                                         <td className="border border-gray-300 px-4 py-2 font-bold">{item.material}</td>
+                                        <td className="border border-gray-300 px-4 py-2">{item.width ? item.width : '—'}</td>
                                         <td className="border border-gray-300 px-4 py-2">{item.length}</td>
                                         <td className="border border-gray-300 px-4 py-2 font-bold">{item.quantity}</td>
                                     </tr>

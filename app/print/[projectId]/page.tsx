@@ -222,8 +222,8 @@ export default function PrintPage() {
                                                             key={cutIdx}
                                                             style={{ width: `${(cut.length / bar.length) * 100}%` }}
                                                             className={`h-full flex items-center justify-center text-[var(--color-ink)] text-sm font-black relative overflow-hidden print:bg-white ${cut.isWeld
-                                                                    ? 'bg-orange-100 border-r-2 border-dashed border-orange-500 print:border-r'
-                                                                    : 'bg-[var(--color-bg)] border-r-2 border-[var(--color-ink)] print:border-r'
+                                                                ? 'bg-orange-100 border-r-2 border-dashed border-orange-500 print:border-r'
+                                                                : 'bg-[var(--color-bg)] border-r-2 border-[var(--color-ink)] print:border-r'
                                                                 }`}
                                                         >
                                                             {/* Crosshatch pattern for cuts */}
@@ -288,6 +288,7 @@ export default function PrintPage() {
                                         <thead className="bg-[var(--color-ink)] text-[var(--color-bg)]">
                                             <tr>
                                                 <th className="px-6 py-4 font-black tracking-widest uppercase border-r border-white border-opacity-20">MATERIAL</th>
+                                                <th className="px-6 py-4 font-black tracking-widest uppercase border-r border-white border-opacity-20 text-center">LARGURA (mm)</th>
                                                 <th className="px-6 py-4 font-black tracking-widest uppercase border-r border-white border-opacity-20 text-center">COMPR. (mm)</th>
                                                 <th className="px-6 py-4 font-black tracking-widest uppercase text-center">QTD (BARRAS)</th>
                                             </tr>
@@ -296,6 +297,7 @@ export default function PrintPage() {
                                             {result.purchaseList.map((item, idx) => (
                                                 <tr key={idx} className="hover:bg-[var(--color-bg)] transition-colors">
                                                     <td className="px-6 py-4 border-r-2 border-[var(--color-ink)]">{item.material}</td>
+                                                    <td className="px-6 py-4 border-r-2 border-[var(--color-ink)] text-center">{item.width ? item.width : '—'}</td>
                                                     <td className="px-6 py-4 border-r-2 border-[var(--color-ink)] text-center">{item.length}</td>
                                                     <td className="px-6 py-4 text-center font-black text-xl">{item.quantity}</td>
                                                 </tr>
