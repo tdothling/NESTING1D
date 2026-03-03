@@ -19,6 +19,7 @@ export function optimizeCuts(
   // Group requests by material
   const requestsByMaterial: Record<string, CutRequest[]> = {};
   const materialWeights: Record<string, number> = {};
+  const materialWidths: Record<string, number | undefined> = {};
   const directPurchases: PurchaseItem[] = [];
   const materialProfileIds: Record<string, string | undefined> = {};
 
@@ -59,6 +60,10 @@ export function optimizeCuts(
     }
     if (req.profileId) {
       materialProfileIds[mat] = req.profileId;
+    }
+    // Track width for chapas (2D items)
+    if (req.profileType === 'chapa' && req.profileDimensions?.width) {
+      materialWidths[mat] = req.profileDimensions.width;
     }
   });
 
@@ -462,7 +467,8 @@ export function optimizeCuts(
     purchaseList.push({
       material: mat,
       length: Number(len),
-      quantity: purchaseMap[key]
+      quantity: purchaseMap[key],
+      width: materialWidths[mat],
     });
   }
 
