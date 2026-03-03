@@ -30,9 +30,12 @@ export default function InventoryPage() {
     loadStock();
   }, []);
 
-  const handleSave = async () => {
-    await saveStock(stock);
-    toast.success('Estoque salvo e sincronizado na nuvem!');
+  const updateItem = (id: string, field: keyof StockItem, value: any) => {
+    setStock(
+      stock.map((item) =>
+        item.id === id ? { ...item, [field]: value } : item
+      )
+    );
   };
 
   const addItem = () => {
@@ -52,12 +55,42 @@ export default function InventoryPage() {
     toast.success('Item removido com sucesso!');
   };
 
-  const updateItem = (id: string, field: keyof StockItem, value: any) => {
-    setStock(
-      stock.map((item) =>
-        item.id === id ? { ...item, [field]: value } : item
-      )
-    );
+  const handleSave = async () => {
+    // Before saving, merge identical items to avoid redundancy
+    const mergedStock: StockItem[] = [];
+    const itemsToDelete: string[] = [];
+
+    stock.forEach(item => {
+      // Find if we already have an identical item in our merged list
+      const existingIdx = mergedStock.findIndex(m =>
+        m.material === item.material &&
+        m.length === item.length &&
+        m.isScrap === item.isScrap &&
+        m.pricePerKg === item.pricePerKg &&
+        m.weightKgM === item.weightKgM
+      );
+
+      if (existingIdx >= 0 && mergedStock[existingIdx].id !== item.id) {
+        // We found a duplicate! Sum the quantity and mark the current ID for deletion
+        mergedStock[existingIdx].quantity += item.quantity;
+        itemsToDelete.push(item.id);
+      } else {
+        // Unique item, add it to our merged list
+        mergedStock.push({ ...item });
+      }
+    });
+
+    // Delete redundant records from the DB
+    for (const id of itemsToDelete) {
+      await deleteStockItem(id);
+    }
+
+    // Save the merged, clean stock
+    await saveStock(mergedStock);
+
+    // Update local state to reflect the merged stock
+    setStock(mergedStock);
+    toast.success('Estoque salvo e otimizado (itens iguais foram somados)!');
   };
 
   const requestSort = (key: keyof StockItem) => {
@@ -68,151 +101,47 @@ export default function InventoryPage() {
     setSortConfig({ key, direction });
   };
 
-  // --- Grouping Logic ---
-  interface GroupedStockItem {
-    key: string;
-    ids: string[]; // All original DB row IDs in this group
-    material: string;
-    profileId?: string;
-    length: number;
-    totalQuantity: number;
-    weightKgM: number;
-    pricePerKg: number;
-    isScrap: boolean;
-    originProjectId?: string;
-    totalWeightKg: number;
-    totalValueR$: number;
-  }
-
-  const groupedStock = useMemo(() => {
-    const groups: Record<string, GroupedStockItem> = {};
-
-    stock.forEach(item => {
-      const key = `${item.material}|${item.length}|${item.isScrap}`;
-      if (!groups[key]) {
-        groups[key] = {
-          key,
-          ids: [item.id],
-          material: item.material,
-          profileId: item.profileId,
-          length: item.length,
-          totalQuantity: item.quantity,
-          weightKgM: item.weightKgM || 0,
-          pricePerKg: item.pricePerKg || 0,
-          isScrap: item.isScrap,
-          originProjectId: item.originProjectId,
-          totalWeightKg: item.quantity * (item.length / 1000) * (item.weightKgM || 0),
-          totalValueR$: item.quantity * (item.length / 1000) * (item.weightKgM || 0) * (item.pricePerKg || 0),
-        };
-      } else {
-        groups[key].ids.push(item.id);
-        groups[key].totalQuantity += item.quantity;
-        const itemWeight = item.quantity * (item.length / 1000) * (item.weightKgM || 0);
-        groups[key].totalWeightKg += itemWeight;
-        groups[key].totalValueR$ += itemWeight * (item.pricePerKg || 0);
-        // Use the pricePerKg from the first item that has a value
-        if (!groups[key].pricePerKg && item.pricePerKg) {
-          groups[key].pricePerKg = item.pricePerKg;
-        }
-      }
-    });
-
-    return Object.values(groups);
-  }, [stock]);
-
-  const sortedGroupedStock = useMemo(() => {
-    let items = [...groupedStock];
+  const sortedStock = useMemo(() => {
+    let sortableItems = [...stock];
 
     // 1. Filter by Tab
     if (filterTab === 'bars') {
-      items = items.filter(g => !g.isScrap);
+      sortableItems = sortableItems.filter(item => !item.isScrap);
     } else if (filterTab === 'scraps') {
-      items = items.filter(g => g.isScrap);
+      sortableItems = sortableItems.filter(item => item.isScrap);
     }
 
     // 2. Sort
     if (sortConfig !== null) {
-      items.sort((a, b) => {
-        let aValue: any;
-        let bValue: any;
+      sortableItems.sort((a, b) => {
+        let aValue: any = a[sortConfig.key];
+        let bValue: any = b[sortConfig.key];
 
-        switch (sortConfig.key) {
-          case 'material':
-            aValue = a.material.toLowerCase();
-            bValue = b.material.toLowerCase();
-            break;
-          case 'length':
-            aValue = a.length;
-            bValue = b.length;
-            break;
-          case 'quantity':
-            aValue = a.totalQuantity;
-            bValue = b.totalQuantity;
-            break;
-          case 'pricePerKg':
-            aValue = a.pricePerKg;
-            bValue = b.pricePerKg;
-            break;
-          case 'weightKgM':
-            aValue = a.totalWeightKg;
-            bValue = b.totalWeightKg;
-            break;
-          case 'isScrap':
-            aValue = a.isScrap ? 1 : 0;
-            bValue = b.isScrap ? 1 : 0;
-            break;
-          default:
-            aValue = 0;
-            bValue = 0;
+        // Custom sort logic for 'weight' which isn't a direct key on StockItem
+        if (sortConfig.key === 'weightKgM') {
+          aValue = a.quantity * (a.length / 1000) * (a.weightKgM || 0);
+          bValue = b.quantity * (b.length / 1000) * (b.weightKgM || 0);
         }
 
-        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
-        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
+        if (aValue == null) aValue = '';
+        if (bValue == null) bValue = '';
+
+        if (typeof aValue === 'string' && typeof bValue === 'string') {
+          aValue = aValue.toLowerCase();
+          bValue = bValue.toLowerCase();
+        }
+
+        if (aValue < bValue) {
+          return sortConfig.direction === 'asc' ? -1 : 1;
+        }
+        if (aValue > bValue) {
+          return sortConfig.direction === 'asc' ? 1 : -1;
+        }
         return 0;
       });
     }
-    return items;
-  }, [groupedStock, sortConfig, filterTab]);
-
-  // Propagate group-level edits to all underlying stock items
-  const updateGroup = (groupKey: string, field: 'material' | 'length' | 'pricePerKg' | 'isScrap', value: any) => {
-    const group = groupedStock.find(g => g.key === groupKey);
-    if (!group) return;
-
-    // Map the group field to the StockItem field
-    const stockField: keyof StockItem = field === 'pricePerKg' ? 'pricePerKg' : field;
-
-    setStock(current =>
-      current.map(item =>
-        group.ids.includes(item.id) ? { ...item, [stockField]: value } : item
-      )
-    );
-  };
-
-  const updateGroupProfile = (groupKey: string, profile: SteelProfile) => {
-    const group = groupedStock.find(g => g.key === groupKey);
-    if (!group) return;
-    setStock(current =>
-      current.map(item =>
-        group.ids.includes(item.id) ? {
-          ...item,
-          material: profile.name,
-          profileId: profile.id,
-          weightKgM: profile.weightKgM
-        } : item
-      )
-    );
-  };
-
-  const removeGroup = async (groupKey: string) => {
-    const group = groupedStock.find(g => g.key === groupKey);
-    if (!group) return;
-    for (const id of group.ids) {
-      await deleteStockItem(id);
-    }
-    setStock(current => current.filter(item => !group.ids.includes(item.id)));
-    toast.success(`${group.ids.length} registro(s) removido(s)!`);
-  };
+    return sortableItems;
+  }, [stock, sortConfig, filterTab]);
 
   const stats = useMemo(() => {
     let totalWeightKg = 0;
@@ -386,29 +315,33 @@ export default function InventoryPage() {
                       </td>
                     </tr>
                   ) : (
-                    sortedGroupedStock.map((group) => (
-                      <tr key={group.key} className="hover:bg-[var(--color-bg)] transition-colors group">
+                    sortedStock.map((item) => (
+                      <tr key={item.id} className="hover:bg-[var(--color-bg)] transition-colors group">
                         {/* Material */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <ProfileAutocomplete
-                            value={group.material}
-                            onChange={(val) => updateGroup(group.key, 'material', val)}
-                            onSelect={(profile: SteelProfile) => updateGroupProfile(group.key, profile)}
+                            value={item.material}
+                            onChange={(val) => updateItem(item.id, 'material', val)}
+                            onSelect={(profile: SteelProfile) => {
+                              setStock(current =>
+                                current.map(i => i.id === item.id ? {
+                                  ...i,
+                                  material: profile.name,
+                                  profileId: profile.id,
+                                  weightKgM: profile.weightKgM
+                                } : i)
+                              );
+                            }}
                             className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-mono font-black uppercase text-[var(--color-ink)] transition-colors p-2"
                           />
-                          {group.ids.length > 1 && (
-                            <span className="inline-block mt-1 bg-[var(--color-accent)] text-white text-[10px] font-black px-2 py-0.5 uppercase tracking-widest">
-                              {group.ids.length} registros agrupados
-                            </span>
-                          )}
                         </td>
                         {/* Comprimento */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
                             <input
                               type="number"
-                              value={group.length}
-                              onChange={(e) => updateGroup(group.key, 'length', Number(e.target.value))}
+                              value={item.length}
+                              onChange={(e) => updateItem(item.id, 'length', Number(e.target.value))}
                               className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-xl font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
                             />
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">MM</span>
@@ -417,9 +350,12 @@ export default function InventoryPage() {
                         {/* Quantidade Total */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
-                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-xl font-black font-mono text-[var(--color-ink)] p-2 text-right">
-                              {group.totalQuantity}
-                            </span>
+                            <input
+                              type="number"
+                              value={item.quantity}
+                              onChange={(e) => updateItem(item.id, 'quantity', Number(e.target.value))}
+                              className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-xl font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
+                            />
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">UN</span>
                           </div>
                         </td>
@@ -427,7 +363,7 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
                             <span className="block w-full bg-transparent border-2 border-transparent sm:text-lg font-black font-mono text-[var(--color-ink)] p-2 text-right">
-                              {group.totalWeightKg.toFixed(2)}
+                              {(item.quantity * (item.length / 1000) * (item.weightKgM || 0)).toFixed(2)}
                             </span>
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">KG</span>
                           </div>
@@ -439,9 +375,9 @@ export default function InventoryPage() {
                             <input
                               type="number"
                               step="0.01"
-                              value={group.pricePerKg || ''}
+                              value={item.pricePerKg || ''}
                               placeholder="0.00"
-                              onChange={(e) => updateGroup(group.key, 'pricePerKg', Number(e.target.value))}
+                              onChange={(e) => updateItem(item.id, 'pricePerKg', Number(e.target.value))}
                               className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
                             />
                           </div>
@@ -450,8 +386,8 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
                             <span className="block w-full bg-transparent border-2 border-transparent sm:text-base font-black font-mono text-[var(--color-ink)] p-2 text-right">
-                              {group.totalValueR$ > 0
-                                ? group.totalValueR$.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                              {((item.quantity * (item.length / 1000) * (item.weightKgM || 0)) * (item.pricePerKg || 0)) > 0
+                                ? ((item.quantity * (item.length / 1000) * (item.weightKgM || 0)) * (item.pricePerKg || 0)).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
                                 : '—'}
                             </span>
                           </div>
@@ -460,8 +396,8 @@ export default function InventoryPage() {
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="relative">
                             <select
-                              value={group.isScrap ? 'scrap' : 'bar'}
-                              onChange={(e) => updateGroup(group.key, 'isScrap', e.target.value === 'scrap')}
+                              value={item.isScrap ? 'scrap' : 'bar'}
+                              onChange={(e) => updateItem(item.id, 'isScrap', e.target.value === 'scrap')}
                               className="block w-full bg-transparent border-2 border-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-0 sm:text-sm font-mono font-black uppercase tracking-widest p-3 cursor-pointer appearance-none hover:bg-[var(--color-ink)] hover:text-white transition-colors"
                             >
                               <option value="bar" className="bg-white text-[var(--color-ink)]">BARRA BRUTA</option>
@@ -475,9 +411,9 @@ export default function InventoryPage() {
                         {/* Delete */}
                         <td className="px-2 py-3 text-center border-b-2 border-[var(--color-ink)] relative bg-red-50 sm:bg-transparent">
                           <button
-                            onClick={() => removeGroup(group.key)}
+                            onClick={() => removeItem(item.id)}
                             className="p-3 text-red-600 sm:text-[var(--color-ink)] sm:opacity-50 hover:opacity-100 hover:bg-red-600 hover:text-white transition-all active:scale-95 inline-flex justify-center items-center w-full sm:w-auto h-full absolute inset-0 sm:relative"
-                            title="REMOVER GRUPO"
+                            title="REMOVER ITEM"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>
