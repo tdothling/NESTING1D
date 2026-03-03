@@ -7,7 +7,7 @@ export interface StockItem {
   length: number;
   quantity: number;
   weightKgM?: number; // Weight in Kg per meter
-  pricePerMeter?: number; // Price in R$ per meter
+  pricePerKg?: number; // Price in R$ per KG (industry standard)
   isScrap: boolean; // true if it's a scrap piece, false if it's a full bar
   originProjectId?: string; // ID of the project that generated this scrap
 }

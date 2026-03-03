@@ -36,9 +36,10 @@ export function StepResults({
     const estimatedCost = result.purchaseList
         ? result.purchaseList.reduce((total, item) => {
             // Find the price per meter for this material from stock
-            const stockItem = stock.find(s => s.material.trim().toLowerCase() === item.material.trim().toLowerCase() && s.pricePerMeter && s.pricePerMeter > 0);
-            if (stockItem && stockItem.pricePerMeter) {
-                return total + (item.length / 1000) * stockItem.pricePerMeter * item.quantity;
+            const stockItem = stock.find(s => s.material.trim().toLowerCase() === item.material.trim().toLowerCase() && s.pricePerKg && s.pricePerKg > 0);
+            if (stockItem && stockItem.pricePerKg) {
+                const weightKgM = stockItem.weightKgM || 0;
+                return total + (item.length / 1000) * weightKgM * stockItem.pricePerKg * item.quantity;
             }
             return total;
         }, 0)

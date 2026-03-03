@@ -68,47 +68,151 @@ export default function InventoryPage() {
     setSortConfig({ key, direction });
   };
 
-  const sortedStock = useMemo(() => {
-    let sortableItems = [...stock];
+  // --- Grouping Logic ---
+  interface GroupedStockItem {
+    key: string;
+    ids: string[]; // All original DB row IDs in this group
+    material: string;
+    profileId?: string;
+    length: number;
+    totalQuantity: number;
+    weightKgM: number;
+    pricePerKg: number;
+    isScrap: boolean;
+    originProjectId?: string;
+    totalWeightKg: number;
+    totalValueR$: number;
+  }
+
+  const groupedStock = useMemo(() => {
+    const groups: Record<string, GroupedStockItem> = {};
+
+    stock.forEach(item => {
+      const key = `${item.material}|${item.length}|${item.isScrap}`;
+      if (!groups[key]) {
+        groups[key] = {
+          key,
+          ids: [item.id],
+          material: item.material,
+          profileId: item.profileId,
+          length: item.length,
+          totalQuantity: item.quantity,
+          weightKgM: item.weightKgM || 0,
+          pricePerKg: item.pricePerKg || 0,
+          isScrap: item.isScrap,
+          originProjectId: item.originProjectId,
+          totalWeightKg: item.quantity * (item.length / 1000) * (item.weightKgM || 0),
+          totalValueR$: item.quantity * (item.length / 1000) * (item.weightKgM || 0) * (item.pricePerKg || 0),
+        };
+      } else {
+        groups[key].ids.push(item.id);
+        groups[key].totalQuantity += item.quantity;
+        const itemWeight = item.quantity * (item.length / 1000) * (item.weightKgM || 0);
+        groups[key].totalWeightKg += itemWeight;
+        groups[key].totalValueR$ += itemWeight * (item.pricePerKg || 0);
+        // Use the pricePerKg from the first item that has a value
+        if (!groups[key].pricePerKg && item.pricePerKg) {
+          groups[key].pricePerKg = item.pricePerKg;
+        }
+      }
+    });
+
+    return Object.values(groups);
+  }, [stock]);
+
+  const sortedGroupedStock = useMemo(() => {
+    let items = [...groupedStock];
 
     // 1. Filter by Tab
     if (filterTab === 'bars') {
-      sortableItems = sortableItems.filter(item => !item.isScrap);
+      items = items.filter(g => !g.isScrap);
     } else if (filterTab === 'scraps') {
-      sortableItems = sortableItems.filter(item => item.isScrap);
+      items = items.filter(g => g.isScrap);
     }
 
     // 2. Sort
     if (sortConfig !== null) {
-      sortableItems.sort((a, b) => {
-        let aValue: any = a[sortConfig.key];
-        let bValue: any = b[sortConfig.key];
+      items.sort((a, b) => {
+        let aValue: any;
+        let bValue: any;
 
-        // Custom sort logic for 'weight' which isn't a direct key on StockItem
-        if (sortConfig.key === 'weightKgM') {
-          aValue = a.quantity * (a.length / 1000) * (a.weightKgM || 0);
-          bValue = b.quantity * (b.length / 1000) * (b.weightKgM || 0);
+        switch (sortConfig.key) {
+          case 'material':
+            aValue = a.material.toLowerCase();
+            bValue = b.material.toLowerCase();
+            break;
+          case 'length':
+            aValue = a.length;
+            bValue = b.length;
+            break;
+          case 'quantity':
+            aValue = a.totalQuantity;
+            bValue = b.totalQuantity;
+            break;
+          case 'pricePerKg':
+            aValue = a.pricePerKg;
+            bValue = b.pricePerKg;
+            break;
+          case 'weightKgM':
+            aValue = a.totalWeightKg;
+            bValue = b.totalWeightKg;
+            break;
+          case 'isScrap':
+            aValue = a.isScrap ? 1 : 0;
+            bValue = b.isScrap ? 1 : 0;
+            break;
+          default:
+            aValue = 0;
+            bValue = 0;
         }
 
-        if (aValue == null) aValue = '';
-        if (bValue == null) bValue = '';
-
-        if (typeof aValue === 'string' && typeof bValue === 'string') {
-          aValue = aValue.toLowerCase();
-          bValue = bValue.toLowerCase();
-        }
-
-        if (aValue < bValue) {
-          return sortConfig.direction === 'asc' ? -1 : 1;
-        }
-        if (aValue > bValue) {
-          return sortConfig.direction === 'asc' ? 1 : -1;
-        }
+        if (aValue < bValue) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aValue > bValue) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
-    return sortableItems;
-  }, [stock, sortConfig]);
+    return items;
+  }, [groupedStock, sortConfig, filterTab]);
+
+  // Propagate group-level edits to all underlying stock items
+  const updateGroup = (groupKey: string, field: 'material' | 'length' | 'pricePerKg' | 'isScrap', value: any) => {
+    const group = groupedStock.find(g => g.key === groupKey);
+    if (!group) return;
+
+    // Map the group field to the StockItem field
+    const stockField: keyof StockItem = field === 'pricePerKg' ? 'pricePerKg' : field;
+
+    setStock(current =>
+      current.map(item =>
+        group.ids.includes(item.id) ? { ...item, [stockField]: value } : item
+      )
+    );
+  };
+
+  const updateGroupProfile = (groupKey: string, profile: SteelProfile) => {
+    const group = groupedStock.find(g => g.key === groupKey);
+    if (!group) return;
+    setStock(current =>
+      current.map(item =>
+        group.ids.includes(item.id) ? {
+          ...item,
+          material: profile.name,
+          profileId: profile.id,
+          weightKgM: profile.weightKgM
+        } : item
+      )
+    );
+  };
+
+  const removeGroup = async (groupKey: string) => {
+    const group = groupedStock.find(g => g.key === groupKey);
+    if (!group) return;
+    for (const id of group.ids) {
+      await deleteStockItem(id);
+    }
+    setStock(current => current.filter(item => !group.ids.includes(item.id)));
+    toast.success(`${group.ids.length} registro(s) removido(s)!`);
+  };
 
   const stats = useMemo(() => {
     let totalWeightKg = 0;
@@ -116,7 +220,6 @@ export default function InventoryPage() {
     let scrapWeightKg = 0;
 
     stock.forEach(item => {
-      // Calculate weight based on quantity, length(mm) to (m), and weightKgM
       const itemWeight = (item.quantity * (item.length / 1000) * (item.weightKgM || 0));
       totalWeightKg += itemWeight;
 
@@ -124,9 +227,9 @@ export default function InventoryPage() {
         scrapWeightKg += itemWeight;
       }
 
-      // Calculate value
-      if (item.pricePerMeter && item.pricePerMeter > 0) {
-        totalValueRt += (item.quantity * (item.length / 1000) * item.pricePerMeter);
+      // Value = weight_kg × pricePerKg
+      if (item.pricePerKg && item.pricePerKg > 0) {
+        totalValueRt += itemWeight * item.pricePerKg;
       }
     });
 
@@ -242,111 +345,123 @@ export default function InventoryPage() {
               <table className="min-w-full divide-y divide-none">
                 <thead className="bg-[var(--color-ink)] text-[var(--color-bg)]">
                   <tr>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[30%] min-w-[250px]" onClick={() => requestSort('material')}>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[220px]" onClick={() => requestSort('material')}>
                       Material
                       {sortConfig?.key === 'material' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('length')}>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[130px]" onClick={() => requestSort('length')}>
                       Comp. <span className="opacity-50">(mm)</span>
                       {sortConfig?.key === 'length' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('quantity')}>
-                      Volume
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[100px]" onClick={() => requestSort('quantity')}>
+                      Qtd
                       {sortConfig?.key === 'quantity' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('pricePerMeter')}>
-                      R$/metro
-                      {sortConfig?.key === 'pricePerMeter' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
-                    </th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[15%] min-w-[150px]" onClick={() => requestSort('weightKgM')}>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[120px]" onClick={() => requestSort('weightKgM')}>
                       Peso KG
                       {sortConfig?.key === 'weightKgM' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
-                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors w-[20%] min-w-[180px]" onClick={() => requestSort('isScrap')}>
-                      Classificação
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[120px]" onClick={() => requestSort('pricePerKg' as keyof StockItem)}>
+                      R$/KG
+                      {sortConfig?.key === ('pricePerKg' as keyof StockItem) ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 min-w-[130px]">
+                      Valor R$
+                    </th>
+                    <th scope="col" className="px-4 py-4 text-left text-xs font-bold uppercase tracking-widest font-mono border-r border-white border-opacity-20 cursor-pointer hover:bg-white hover:bg-opacity-10 transition-colors min-w-[160px]" onClick={() => requestSort('isScrap')}>
+                      Tipo
                       {sortConfig?.key === 'isScrap' ? (sortConfig.direction === 'asc' ? <ArrowUp className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" /> : <ArrowDown className="w-4 h-4 inline-block ml-2 text-[var(--color-accent)]" />) : <ArrowUpDown className="w-4 h-4 inline-block ml-2 opacity-30" />}
                     </th>
-                    <th scope="col" className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest font-mono w-[5%] min-w-[80px]">CMD</th>
+                    <th scope="col" className="px-4 py-4 text-center text-xs font-bold uppercase tracking-widest font-mono min-w-[70px]">CMD</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y-4 divide-[var(--color-ink)] divide-opacity-10">
                   {stock.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-16 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
+                      <td colSpan={9} className="px-4 py-16 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
                         <div className="flex flex-col items-center justify-center opacity-60">
                           <span className="font-mono font-black text-2xl uppercase tracking-widest mb-2 text-[var(--color-ink)]">ESTOQUE VAZIO</span>
-                          <span className="font-mono text-sm font-bold uppercase tracking-widest max-w-md text-[var(--color-ink)]">NENHUMA MATÉRIA-PRIMA REGISTRADA. CLIQUE EM "NOVO LOTE" PARA INICIAR.</span>
+                          <span className="font-mono text-sm font-bold uppercase tracking-widest max-w-md text-[var(--color-ink)]">NENHUMA MATÉRIA-PRIMA REGISTRADA. CLIQUE EM &quot;NOVO LOTE&quot; PARA INICIAR.</span>
                         </div>
                       </td>
                     </tr>
                   ) : (
-                    sortedStock.map((item) => (
-                      <tr key={item.id} className="hover:bg-[var(--color-bg)] transition-colors group">
+                    sortedGroupedStock.map((group) => (
+                      <tr key={group.key} className="hover:bg-[var(--color-bg)] transition-colors group">
+                        {/* Material */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <ProfileAutocomplete
-                            value={item.material}
-                            onChange={(val) => updateItem(item.id, 'material', val)}
-                            onSelect={(profile: SteelProfile) => {
-                              setStock(current =>
-                                current.map(i => i.id === item.id ? {
-                                  ...i,
-                                  material: profile.name,
-                                  profileId: profile.id,
-                                  weightKgM: profile.weightKgM
-                                } : i)
-                              );
-                            }}
+                            value={group.material}
+                            onChange={(val) => updateGroup(group.key, 'material', val)}
+                            onSelect={(profile: SteelProfile) => updateGroupProfile(group.key, profile)}
                             className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-mono font-black uppercase text-[var(--color-ink)] transition-colors p-2"
                           />
+                          {group.ids.length > 1 && (
+                            <span className="inline-block mt-1 bg-[var(--color-accent)] text-white text-[10px] font-black px-2 py-0.5 uppercase tracking-widest">
+                              {group.ids.length} registros agrupados
+                            </span>
+                          )}
                         </td>
+                        {/* Comprimento */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
                             <input
                               type="number"
-                              value={item.length}
-                              onChange={(e) => updateItem(item.id, 'length', Number(e.target.value))}
+                              value={group.length}
+                              onChange={(e) => updateGroup(group.key, 'length', Number(e.target.value))}
                               className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-xl font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
                             />
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">MM</span>
                           </div>
                         </td>
+                        {/* Quantidade Total */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
-                            <input
-                              type="number"
-                              value={item.quantity}
-                              onChange={(e) => updateItem(item.id, 'quantity', Number(e.target.value))}
-                              className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-xl font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
-                            />
+                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-xl font-black font-mono text-[var(--color-ink)] p-2 text-right">
+                              {group.totalQuantity}
+                            </span>
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">UN</span>
                           </div>
                         </td>
+                        {/* Peso KG */}
+                        <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
+                          <div className="flex items-center">
+                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-lg font-black font-mono text-[var(--color-ink)] p-2 text-right">
+                              {group.totalWeightKg.toFixed(2)}
+                            </span>
+                            <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">KG</span>
+                          </div>
+                        </td>
+                        {/* R$/KG */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
                             <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 mr-2">R$</span>
                             <input
                               type="number"
                               step="0.01"
-                              value={item.pricePerMeter || ''}
+                              value={group.pricePerKg || ''}
                               placeholder="0.00"
-                              onChange={(e) => updateItem(item.id, 'pricePerMeter', Number(e.target.value))}
+                              onChange={(e) => updateGroup(group.key, 'pricePerKg', Number(e.target.value))}
                               className="block w-full bg-transparent border-2 border-transparent hover:border-[var(--color-ink)] focus:border-[var(--color-ink)] focus:outline-none focus:ring-0 sm:text-base font-black font-mono text-[var(--color-ink)] transition-colors p-2 text-right"
                             />
                           </div>
                         </td>
+                        {/* Valor Total R$ (calculated) */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="flex items-center">
-                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-lg font-black font-mono text-[var(--color-ink)] p-2 text-right">
-                              {(item.quantity * (item.length / 1000) * (item.weightKgM || 0)).toFixed(2)}
+                            <span className="block w-full bg-transparent border-2 border-transparent sm:text-base font-black font-mono text-[var(--color-ink)] p-2 text-right">
+                              {group.totalValueR$ > 0
+                                ? group.totalValueR$.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })
+                                : '—'}
                             </span>
-                            <span className="font-mono text-xs font-bold uppercase tracking-widest opacity-70 ml-2">KG</span>
                           </div>
                         </td>
+                        {/* Classificação */}
                         <td className="px-4 py-3 border-r-2 border-[var(--color-ink)] border-b-2">
                           <div className="relative">
                             <select
-                              value={item.isScrap ? 'scrap' : 'bar'}
-                              onChange={(e) => updateItem(item.id, 'isScrap', e.target.value === 'scrap')}
+                              value={group.isScrap ? 'scrap' : 'bar'}
+                              onChange={(e) => updateGroup(group.key, 'isScrap', e.target.value === 'scrap')}
                               className="block w-full bg-transparent border-2 border-[var(--color-ink)] focus:border-[var(--color-accent)] focus:outline-none focus:ring-0 sm:text-sm font-mono font-black uppercase tracking-widest p-3 cursor-pointer appearance-none hover:bg-[var(--color-ink)] hover:text-white transition-colors"
                             >
                               <option value="bar" className="bg-white text-[var(--color-ink)]">BARRA BRUTA</option>
@@ -357,11 +472,12 @@ export default function InventoryPage() {
                             </div>
                           </div>
                         </td>
+                        {/* Delete */}
                         <td className="px-2 py-3 text-center border-b-2 border-[var(--color-ink)] relative bg-red-50 sm:bg-transparent">
                           <button
-                            onClick={() => removeItem(item.id)}
+                            onClick={() => removeGroup(group.key)}
                             className="p-3 text-red-600 sm:text-[var(--color-ink)] sm:opacity-50 hover:opacity-100 hover:bg-red-600 hover:text-white transition-all active:scale-95 inline-flex justify-center items-center w-full sm:w-auto h-full absolute inset-0 sm:relative"
-                            title="REMOVER REGISTRO"
+                            title="REMOVER GRUPO"
                           >
                             <Trash2 className="h-5 w-5" />
                           </button>

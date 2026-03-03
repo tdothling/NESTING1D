@@ -15,7 +15,7 @@ export const getStock = async (): Promise<StockItem[]> => {
     length: item.length,
     quantity: item.quantity,
     weightKgM: item.weight_kg_m,
-    pricePerMeter: item.price_per_meter,
+    pricePerKg: item.price_per_kg,
     isScrap: item.is_scrap,
     originProjectId: item.origin_project_id
   }));
@@ -30,7 +30,7 @@ export const saveStock = async (stock: StockItem[]) => {
       length: item.length,
       quantity: item.quantity,
       weight_kg_m: item.weightKgM || 0,
-      price_per_meter: item.pricePerMeter || 0,
+      price_per_kg: item.pricePerKg || 0,
       is_scrap: item.isScrap,
       origin_project_id: item.originProjectId || null
     }))

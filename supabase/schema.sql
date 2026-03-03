@@ -19,7 +19,7 @@ CREATE TABLE IF NOT EXISTS stock (
   length INTEGER NOT NULL,
   quantity INTEGER NOT NULL DEFAULT 0,
   weight_kg_m NUMERIC(10, 2) DEFAULT 0,
-  price_per_meter NUMERIC(10, 2) DEFAULT 0,
+  price_per_kg NUMERIC(10, 2) DEFAULT 0,
   is_scrap BOOLEAN DEFAULT false,
   origin_project_id UUID REFERENCES projects(id) ON DELETE SET NULL,
   created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
