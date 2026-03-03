@@ -25,8 +25,21 @@ export function optimizeCuts(
   requests.forEach(req => {
     // Check if item skips optimization (e.g., Plates)
     if (req.skipOptimization) {
+      // For chapas: enrich material name with dimensions (width × length)
+      let materialName = req.material;
+      const dims = req.profileDimensions;
+      if (dims && req.profileType === 'chapa') {
+        const w = dims.width || 0;
+        const h = dims.height || 0;
+        const t = dims.thickness || 0;
+        if (w > 0 && h > 0 && t > 0) {
+          materialName = `Chapa ${w}x${h} e=${t.toFixed(2)}mm`;
+        } else if (t > 0) {
+          materialName = `Chapa e=${t.toFixed(2)}mm`;
+        }
+      }
       directPurchases.push({
-        material: req.material,
+        material: materialName,
         length: req.length,
         quantity: req.quantity
       });
