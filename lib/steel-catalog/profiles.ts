@@ -162,7 +162,7 @@ export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof Omit<SteelProfi
     'cantoneira': ['width', 'thickness'],
     'barra_chata': ['width', 'thickness'],
     'barra_redonda': ['diameter'],
-    'chapa': ['width', 'height', 'thickness'],
+    'chapa': ['width', 'thickness'],
     'w_hp': [], // Handled specifically by weight input
 };
 
@@ -179,7 +179,6 @@ export const DIMENSION_LABELS: Record<string, string> = {
 export const DIMENSION_LABEL_OVERRIDES: Partial<Record<ProfileCategory, Record<string, string>>> = {
     'chapa': {
         width: 'Largura (mm)',
-        height: 'Comprimento (mm)',
         thickness: 'Espessura (mm)',
     },
 };

@@ -156,7 +156,7 @@ function ProfileDimensionEditor({
                     {req.profileType !== 'w_hp' && req.weightKgM && req.weightKgM > 0 ? (
                         <div className="flex items-center justify-between pt-3 mt-3 border-t-2 border-dashed border-[var(--color-ink)] border-opacity-30">
                             <span className="text-[10px] font-black text-[var(--color-ink)] uppercase tracking-widest">PESO CALCULADO:</span>
-                            <span className="text-sm font-black text-[var(--color-bg)] bg-[var(--color-ink)] border-2 border-[var(--color-ink)] px-3 py-1 shadow-[2px_2px_0px_0px_var(--color-accent)]">{req.weightKgM} KG/M</span>
+                            <span className="text-sm font-black text-[var(--color-bg)] bg-[var(--color-ink)] border-2 border-[var(--color-ink)] px-3 py-1 shadow-[2px_2px_0px_0px_var(--color-accent)]">{req.weightKgM} {req.profileType === 'chapa' ? 'KG/M²' : 'KG/M'}</span>
                         </div>
                     ) : (
                         <div className="flex items-center justify-between pt-3 mt-3 border-t-2 border-dashed border-[var(--color-ink)] border-opacity-30">
@@ -199,7 +199,7 @@ export function StepReview({
     loading
 }: StepReviewProps) {
     return (
-        <div className="space-y-8 font-mono max-w-7xl mx-auto">
+        <div className="space-y-8 font-mono max-w-[1600px] mx-auto">
             {/* Header section */}
             <div className="mb-6 border-l-8 border-[var(--color-ink)] pl-4">
                 <h2 className="text-3xl font-black uppercase tracking-widest text-[var(--color-ink)] block">
@@ -252,7 +252,7 @@ export function StepReview({
                                 <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[25%]">PERFIL / DIMENSÕES</th>
                                 <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[10%]">COMP. (MM)</th>
                                 <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[10%]">QTD</th>
-                                <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[10%]">PESO (KG/M)</th>
+                                <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[10%]">PESO</th>
                                 <th scope="col" className="px-4 py-4 text-center text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[10%]" title="Pular Otimização de Barra (ex: Chapas já cortadas)">DIR. COMPRA</th>
                                 <th scope="col" className="px-4 py-4 text-left text-xs font-black text-[var(--color-ink)] uppercase tracking-widest border-r-2 border-[var(--color-ink)] w-[15%]">DESCRIÇÃO</th>
                                 <th scope="col" className="px-4 py-4 w-[5%]"></th>
@@ -306,6 +306,11 @@ export function StepReview({
                                             onChange={(e) => updateRequest(req.id, 'weightKgM', Number(e.target.value))}
                                             className={`block w-full border-2 border-[var(--color-ink)] rounded-none outline-none focus:ring-0 focus:border-[var(--color-accent)] text-sm font-bold px-2 py-2 text-center uppercase tracking-widest ${req.weightKgM && req.weightKgM > 0 ? 'bg-green-100' : 'bg-white'}`}
                                         />
+                                        {req.weightKgM != null && req.weightKgM > 0 && (
+                                            <span className="block text-[9px] font-black text-[var(--color-ink)] opacity-50 uppercase tracking-widest mt-1 text-center">
+                                                {req.profileType === 'chapa' ? 'KG/M²' : 'KG/M'}
+                                            </span>
+                                        )}
                                     </td>
                                     <td className="px-4 py-4 text-center border-r-2 border-[var(--color-ink)] align-middle">
                                         <label className="flex items-center justify-center cursor-pointer relative top-2">
