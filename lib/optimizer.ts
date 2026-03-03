@@ -278,6 +278,8 @@ export function optimizeCuts(
         const filtered = availableScraps.filter(s => !excludeBinIndices.has(s.binIndex));
         if (filtered.length < 2) return null;
 
+        const minPartLength = options.maxScrapLength > 0 ? options.maxScrapLength : 1;
+
         // Try 2 scraps (1 weld)
         for (let i = 0; i < filtered.length; i++) {
           for (let j = i + 1; j < filtered.length; j++) {
@@ -286,7 +288,7 @@ export function optimizeCuts(
             if (total >= needed) {
               const part1 = filtered[i].length;
               const part2 = targetLength - part1;
-              if (part2 > 0 && (part2 + options.kerf) <= filtered[j].length) {
+              if (part2 >= minPartLength && (part2 + options.kerf) <= filtered[j].length) {
                 return { usedScraps: [filtered[i], filtered[j]], parts: [part1, part2] };
               }
             }
@@ -304,7 +306,7 @@ export function optimizeCuts(
                   const p1 = filtered[i].length;
                   const p2 = filtered[j].length;
                   const p3 = targetLength - p1 - p2;
-                  if (p3 > 0 && (p3 + options.kerf) <= filtered[k].length) {
+                  if (p3 >= minPartLength && (p3 + options.kerf) <= filtered[k].length) {
                     return { usedScraps: [filtered[i], filtered[j], filtered[k]], parts: [p1, p2, p3] };
                   }
                 }
@@ -326,7 +328,7 @@ export function optimizeCuts(
                     const p2 = filtered[j].length;
                     const p3 = filtered[k].length;
                     const p4 = targetLength - p1 - p2 - p3;
-                    if (p4 > 0 && (p4 + options.kerf) <= filtered[l].length) {
+                    if (p4 >= minPartLength && (p4 + options.kerf) <= filtered[l].length) {
                       return { usedScraps: [filtered[i], filtered[j], filtered[k], filtered[l]], parts: [p1, p2, p3, p4] };
                     }
                   }
