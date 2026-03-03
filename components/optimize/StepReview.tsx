@@ -14,7 +14,6 @@ interface StepReviewProps {
     requests: CutRequest[];
     globalMultiplier: number;
     setGlobalMultiplier: (n: number) => void;
-    applyMultiplier: () => void;
     updateRequest: (id: string, field: keyof CutRequest, value: any) => void;
     addRequest: () => void;
     removeRequest: (id: string) => void;
@@ -183,7 +182,6 @@ export function StepReview({
     requests,
     globalMultiplier,
     setGlobalMultiplier,
-    applyMultiplier,
     updateRequest,
     addRequest,
     removeRequest,
@@ -225,13 +223,6 @@ export function StepReview({
                         value={globalMultiplier}
                         onChange={(e) => setGlobalMultiplier(Math.max(1, Number(e.target.value)))}
                     />
-                    <button
-                        onClick={applyMultiplier}
-                        disabled={globalMultiplier <= 1 || requests.length === 0}
-                        className="flex-1 sm:flex-none px-4 py-2 border-2 border-[var(--color-ink)] text-sm font-black uppercase tracking-widest text-white bg-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:border-[var(--color-accent)] disabled:opacity-50 disabled:bg-gray-400 disabled:border-gray-400 disabled:hover:translate-x-0 disabled:hover:translate-y-0 transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] disabled:shadow-none hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]"
-                    >
-                        APLICAR
-                    </button>
                 </div>
             </div>
 

@@ -228,8 +228,29 @@ function OptimizeContent() {
     }
   };
 
+  const updateGlobalMultiplier = (newMultiplier: number) => {
+    setRequests(prev => prev.map(req => {
+      const baseQty = (req as any).baseQuantity !== undefined ? (req as any).baseQuantity : req.quantity;
+      return {
+        ...req,
+        baseQuantity: baseQty,
+        quantity: baseQty * newMultiplier
+      } as any;
+    }));
+    setGlobalMultiplier(newMultiplier);
+  };
+
   const updateRequest = (id: string, field: keyof CutRequest, value: any) => {
-    setRequests(prev => prev.map(r => r.id === id ? { ...r, [field]: value } : r));
+    setRequests(prev => prev.map(r => {
+      if (r.id === id) {
+        const newData = { ...r, [field]: value } as any;
+        if (field === 'quantity') {
+          newData.baseQuantity = Math.max(1, Math.round(Number(value) / globalMultiplier));
+        }
+        return newData;
+      }
+      return r;
+    }));
   };
 
   const removeRequest = (id: string) => {
@@ -241,19 +262,9 @@ function OptimizeContent() {
       id: crypto.randomUUID(),
       material: 'Novo Item',
       length: 1000,
-      quantity: 1,
+      quantity: 1 * globalMultiplier,
       description: ''
-    }]);
-  };
-
-  const applyMultiplier = () => {
-    if (globalMultiplier <= 1) return;
-    setRequests(requests.map(req => ({
-      ...req,
-      quantity: req.quantity * globalMultiplier
-    })));
-    toast.success(`Quantidades multiplicadas por ${globalMultiplier}!`);
-    setGlobalMultiplier(1);
+    } as any].map(r => r.id === r.id && !('baseQuantity' in r) ? { ...r, baseQuantity: 1 } : r));
   };
 
   const handleDownloadPDF = () => {
@@ -370,8 +381,7 @@ function OptimizeContent() {
               <StepReview
                 requests={requests}
                 globalMultiplier={globalMultiplier}
-                setGlobalMultiplier={setGlobalMultiplier}
-                applyMultiplier={applyMultiplier}
+                setGlobalMultiplier={updateGlobalMultiplier}
                 updateRequest={updateRequest}
                 addRequest={addRequest}
                 removeRequest={removeRequest}
