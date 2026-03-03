@@ -76,7 +76,9 @@ export function buildCustomProfile(input: CustomProfileInput): CalculatedProfile
 
         case 'chapa':
             weightKgM = t * STEEL_DENSITY; // kg/m²
-            name = `Chapa e=${t.toFixed(2)}`;
+            name = b > 0 && h > 0
+                ? `Chapa ${b}x${h} e=${t.toFixed(2)}mm`
+                : `Chapa e=${t.toFixed(2)}mm`;
             break;
 
         case 'w_hp':

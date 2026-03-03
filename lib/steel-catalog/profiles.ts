@@ -162,7 +162,7 @@ export const REQUIRED_DIMENSIONS: Record<ProfileCategory, (keyof Omit<SteelProfi
     'cantoneira': ['width', 'thickness'],
     'barra_chata': ['width', 'thickness'],
     'barra_redonda': ['diameter'],
-    'chapa': ['thickness'],
+    'chapa': ['width', 'height', 'thickness'],
     'w_hp': [], // Handled specifically by weight input
 };
 
