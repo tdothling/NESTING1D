@@ -251,7 +251,10 @@ export function optimizeCuts(
     // 3. When a bin loses all its items, it is freed (no bar purchase needed)
     // 4. Iterate until no more compositions can be made
 
-    if (maxWeldsPerElement > 0) {
+    const isWProfile = material.trim().toUpperCase().startsWith('W');
+    const isHPProfile = material.trim().toUpperCase().startsWith('HP');
+
+    if (maxWeldsPerElement > 0 && !isWProfile && !isHPProfile) {
       const maxPieces = maxWeldsPerElement + 1;
 
       interface ScrapSource {
