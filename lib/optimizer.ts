@@ -122,6 +122,10 @@ export function optimizeCuts(
           for (let b = 0; b < fullBarsNeeded; b++) {
             const source = consumeBar(standardLength);
 
+            const splitWaste = source.totalLength - standardLength;
+            const splitTrueWaste = splitWaste < options.maxScrapLength ? splitWaste : 0;
+            const splitWeightKgM = materialWeights[material] || 0;
+
             allResults.push({
               id: `${material.replace(/\s+/g, '-')}-split-full-${crypto.randomUUID()}`,
               material: material,
@@ -129,10 +133,10 @@ export function optimizeCuts(
               weightKgM: materialWeights[material],
               length: source.totalLength,
               cuts: [{ length: standardLength, description: `${req.description || 'Peça Longa'} (Parte ${b + 1})` }],
-              waste: source.totalLength - standardLength,
-              trueWaste: source.totalLength - standardLength < options.maxScrapLength ? source.totalLength - standardLength : 0,
-              trueWasteKg: 0,
-              reusableScrap: source.totalLength - standardLength >= options.maxScrapLength ? source.totalLength - standardLength : 0,
+              waste: splitWaste,
+              trueWaste: splitTrueWaste,
+              trueWasteKg: splitTrueWaste > 0 ? Number(((splitTrueWaste / 1000) * splitWeightKgM).toFixed(3)) : 0,
+              reusableScrap: splitWaste >= options.maxScrapLength ? splitWaste : 0,
               isScrapUsed: source.isScrap,
               sourceId: source.sourceId
             });
