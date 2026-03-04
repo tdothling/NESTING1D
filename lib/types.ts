@@ -73,6 +73,7 @@ export interface ProjectSettings {
   standardBarLengths: Record<string, number>;
   maxScrapLength: number;
   kerf: number;
+  maxWeldsPerElement?: number;
 }
 
 export interface Project {

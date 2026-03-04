@@ -24,6 +24,8 @@ interface StepReviewProps {
     setMaxScrapLength: (n: number) => void;
     kerf: number;
     setKerf: (n: number) => void;
+    maxWeldsPerElement: number;
+    setMaxWeldsPerElement: (n: number) => void;
     onBack: () => void;
     onOptimize: () => void;
     loading: boolean;
@@ -192,6 +194,8 @@ export function StepReview({
     setMaxScrapLength,
     kerf,
     setKerf,
+    maxWeldsPerElement,
+    setMaxWeldsPerElement,
     onBack,
     onOptimize,
     loading
@@ -438,6 +442,31 @@ export function StepReview({
                                     />
                                     <div className="bg-[var(--color-ink)] text-white font-black text-sm flex items-center px-4 border-y-2 border-r-2 border-[var(--color-ink)]">
                                         MM
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="bg-[var(--color-bg)] p-5 border-2 border-[var(--color-ink)] max-w-md">
+                                <label htmlFor="max-welds" className="block text-sm font-black text-orange-700 uppercase tracking-widest mb-2 flex items-center">
+                                    <span className="w-2 h-2 bg-orange-500 inline-block mr-2"></span>
+                                    MÁX. SOLDAS POR BARRA COMPOSTA
+                                </label>
+                                <p className="text-xs font-bold text-[var(--color-ink)] opacity-70 mb-4 uppercase tracking-widest leading-relaxed">
+                                    PADRÃO: 1 SOLDA (2 PEÇAS). AUMENTE PARA PERMITIR MAIS EMENDAS. PERFIS W/HP NÃO SÃO SOLDADOS.
+                                </p>
+                                <div className="flex">
+                                    <input
+                                        type="number"
+                                        id="max-welds"
+                                        min="0"
+                                        max="5"
+                                        className="flex-1 bg-white border-2 border-[var(--color-ink)] outline-none focus:border-[var(--color-accent)] focus:ring-0 rounded-none text-lg font-black px-3 py-2 text-right"
+                                        placeholder="1"
+                                        value={maxWeldsPerElement}
+                                        onChange={(e) => setMaxWeldsPerElement(Math.max(0, Math.min(5, Number(e.target.value))))}
+                                    />
+                                    <div className="bg-[var(--color-ink)] text-white font-black text-[10px] flex items-center px-3 border-y-2 border-r-2 border-[var(--color-ink)] uppercase tracking-widest">
+                                        SOLDAS
                                     </div>
                                 </div>
                             </div>

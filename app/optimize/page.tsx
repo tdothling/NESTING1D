@@ -30,6 +30,7 @@ function OptimizeContent() {
   const [autoUpdateStock, setAutoUpdateStock] = useState(true);
   const [maxScrapLength, setMaxScrapLength] = useState(1000);
   const [kerf, setKerf] = useState(0);
+  const [maxWeldsPerElement, setMaxWeldsPerElement] = useState(1);
   const [globalMultiplier, setGlobalMultiplier] = useState(1);
 
   useEffect(() => {
@@ -48,6 +49,7 @@ function OptimizeContent() {
               setStandardBarLengths(loadedProject.settings.standardBarLengths);
               setMaxScrapLength(loadedProject.settings.maxScrapLength);
               if (loadedProject.settings.kerf !== undefined) setKerf(loadedProject.settings.kerf);
+              if (loadedProject.settings.maxWeldsPerElement !== undefined) setMaxWeldsPerElement(loadedProject.settings.maxWeldsPerElement);
             }
             if (loadedProject.result) {
               setResult(loadedProject.result);
@@ -132,7 +134,8 @@ function OptimizeContent() {
         standardBarLengths,
         defaultStandardLength: 6000,
         kerf: kerf,
-        maxScrapLength: maxScrapLength
+        maxScrapLength: maxScrapLength,
+        maxWeldsPerElement: maxWeldsPerElement
       };
 
       // Instancia o Web Worker (a partir da pasta public/ ou empacotado pelo Webpack)
@@ -199,7 +202,8 @@ function OptimizeContent() {
         settings: {
           standardBarLengths,
           maxScrapLength,
-          kerf
+          kerf,
+          maxWeldsPerElement
         }
       };
 
@@ -392,6 +396,8 @@ function OptimizeContent() {
                 setMaxScrapLength={setMaxScrapLength}
                 kerf={kerf}
                 setKerf={setKerf}
+                maxWeldsPerElement={maxWeldsPerElement}
+                setMaxWeldsPerElement={setMaxWeldsPerElement}
                 onBack={() => setStep('upload')}
                 onOptimize={handleOptimize}
                 loading={loading}

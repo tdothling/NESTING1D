@@ -5,16 +5,16 @@ interface OptimizerOptions {
   defaultStandardLength: number;
   kerf: number; // blade thickness, e.g., 3mm
   maxScrapLength: number; // lengths below this are true waste, lengths above or equal return to stock
-  maxWeldsPerElement?: number; // max welds per composite element (default: 3, meaning up to 4 pieces)
+  maxWeldsPerElement?: number; // max welds per composite element (default: 1, meaning up to 2 pieces)
 }
 
 export function optimizeCuts(
   requests: CutRequest[],
   stock: StockItem[],
-  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 0, maxScrapLength: 1000, maxWeldsPerElement: 3 }
+  options: OptimizerOptions = { standardBarLengths: {}, defaultStandardLength: 6000, kerf: 0, maxScrapLength: 1000, maxWeldsPerElement: 1 }
 ): { results: BarResult[]; remainingStock: StockItem[]; itemsNotFit: CutRequest[]; purchaseList: PurchaseItem[]; totalTrueWaste: number; totalTrueWasteKg: number; totalReusableScrap: number } {
 
-  const maxWeldsPerElement = options.maxWeldsPerElement ?? 3;
+  const maxWeldsPerElement = options.maxWeldsPerElement ?? 1;
 
   // Group requests by material
   const requestsByMaterial: Record<string, CutRequest[]> = {};
