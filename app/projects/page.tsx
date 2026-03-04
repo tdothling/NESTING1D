@@ -158,7 +158,7 @@ export default function ProjectsPage() {
                                                         target="_blank"
                                                         onClick={(e) => e.stopPropagation()}
                                                         className="flex-1 sm:flex-none flex justify-center items-center p-4 sm:p-5 text-[var(--color-ink)] hover:text-white hover:bg-[var(--color-ink)] transition-colors border-r-2 sm:border-r-0 border-dashed border-[var(--color-ink)] border-opacity-30"
-                                                        title="IMPRIMIR FICHA DE CORTE"
+                                                        title="IMPRIMIR ORDEM DE CORTE"
                                                     >
                                                         <Printer className="w-5 h-5 sm:w-6 sm:h-6" />
                                                     </Link>

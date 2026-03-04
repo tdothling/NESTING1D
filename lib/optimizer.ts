@@ -169,6 +169,7 @@ export function optimizeCuts(
       remainingLength: number;
       cuts: Cut[];
       isScrap: boolean;
+      donatedToComposite: number; // mm of scrap consumed for welding
     }[] = [];
 
     for (const item of itemsToCut) {
@@ -222,7 +223,8 @@ export function optimizeCuts(
             totalLength: source.totalLength,
             remainingLength: source.totalLength - item.length,
             cuts: [{ length: item.length, description: item.description }],
-            isScrap: source.isScrap
+            isScrap: source.isScrap,
+            donatedToComposite: 0
           });
           placed = true;
         }
@@ -393,13 +395,14 @@ export function optimizeCuts(
 
             const combo = findScrapCombination(targetLength, availableScraps, excludeBins);
             if (combo) {
-              // Consume scraps from source bins
+              // Consume scraps from source bins and track donations
               for (let s = 0; s < combo.usedScraps.length; s++) {
                 const scrap = combo.usedScraps[s];
                 const partLen = combo.parts[s];
                 // Only the final cut from the last scrap absorbs the weld/cut kerfs
                 const kerfCharge = (s === combo.usedScraps.length - 1) ? (combo.usedScraps.length - 1) * options.kerf : 0;
                 openBins[scrap.binIndex].remainingLength -= (partLen + kerfCharge);
+                openBins[scrap.binIndex].donatedToComposite += (partLen + kerfCharge);
               }
 
               // Create composite bar result
@@ -460,16 +463,20 @@ export function optimizeCuts(
         weightKgM: bin.weightKgM,
         length: bin.totalLength,
         cuts: bin.cuts,
-        waste: bin.remainingLength,
+        waste: bin.remainingLength + bin.donatedToComposite,
         trueWaste: trueWaste,
         trueWasteKg: Number(trueWasteKg.toFixed(3)),
         reusableScrap: isReusable ? bin.remainingLength : 0,
         isScrapUsed: bin.isScrap,
-        sourceId: bin.sourceId
+        sourceId: bin.sourceId,
+        donatedToComposite: bin.donatedToComposite > 0 ? bin.donatedToComposite : undefined
       };
     });
 
-    allResults = [...allResults, ...materialResults];
+    // Reorder: regular bars first, then composites (so operator cuts donors before assembling welded bars)
+    const composites = allResults.filter(b => b.material === material && b.isComposite);
+    const nonComposites = allResults.filter(b => b.material !== material || !b.isComposite);
+    allResults = [...nonComposites, ...materialResults, ...composites];
   }
 
   // Generate Purchase List from tracked new bar purchases

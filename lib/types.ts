@@ -48,6 +48,7 @@ export interface BarResult {
   sourceId?: string; // ID of the stock item used
   isComposite?: boolean;       // true if this bar was composed from leftover pieces via welding
   compositeParts?: number[];   // lengths of the pieces that compose this bar
+  donatedToComposite?: number; // mm of scrap donated to a composite bar via welding
 }
 
 export interface PurchaseItem {

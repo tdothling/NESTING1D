@@ -182,8 +182,6 @@ export function StepResults({
                         )}
                         <button
                             onClick={() => {
-                                // Store current in-memory result in sessionStorage so the print page 
-                                // always shows the LATEST optimization, not stale DB data
                                 const printData = {
                                     name: projectName || 'Projeto',
                                     createdAt: new Date().toISOString(),
@@ -195,7 +193,7 @@ export function StepResults({
                             className="inline-flex items-center px-6 py-3 border-2 border-[var(--color-ink)] text-xs font-black uppercase tracking-widest text-[var(--color-bg)] bg-[var(--color-ink)] hover:bg-[var(--color-accent)] hover:border-[var(--color-accent)] hover:text-white transition-all active:scale-95 shadow-[4px_4px_0px_0px_var(--color-ink)] hover:shadow-none hover:translate-y-[4px] hover:translate-x-[4px]"
                         >
                             <Printer className="h-4 w-4 mr-2" />
-                            FICHA DE CORTE
+                            ORDEM DE CORTE
                         </button>
                     </div>
                 </div>
@@ -244,6 +242,9 @@ export function StepResults({
                                     </div>
 
                                     <div className="flex gap-2">
+                                        {bar.donatedToComposite && bar.donatedToComposite > 0 ? (
+                                            <span className="bg-orange-100 text-orange-800 border-2 border-orange-800 px-2 py-1 uppercase tracking-widest">→ SOLDA: {bar.donatedToComposite}MM</span>
+                                        ) : null}
                                         {bar.reusableScrap > 0 ? (
                                             <span className="bg-amber-100 text-amber-800 border-2 border-amber-800 px-2 py-1 uppercase tracking-widest">SOBRA: {bar.reusableScrap}MM</span>
                                         ) : null}
@@ -282,19 +283,51 @@ export function StepResults({
                                             </div>
                                         </div>
                                     ))}
-                                    {/* Waste */}
-                                    <div
-                                        className="h-full flex items-center justify-center text-red-800 text-xs font-mono border-l-2 border-dashed border-red-800 relative cursor-not-allowed"
-                                        style={{
-                                            width: `${(bar.waste / bar.length) * 100}%`,
-                                            backgroundImage: 'repeating-linear-gradient(45deg, #fee2e2 0, #fee2e2 1px, #fecaca 0, #fecaca 50%)',
-                                            backgroundSize: '10px 10px'
-                                        }}
-                                    >
-                                        <div className="bg-white/80 px-1 border border-red-800">
-                                            <span className="truncate font-black">{bar.waste}</span>
+                                    {/* Donated to composite (welding) */}
+                                    {bar.donatedToComposite && bar.donatedToComposite > 0 && (
+                                        <div
+                                            className="h-full flex items-center justify-center text-orange-900 text-xs font-mono border-l-2 border-dashed border-orange-600 relative cursor-help"
+                                            style={{
+                                                width: `${(bar.donatedToComposite / bar.length) * 100}%`,
+                                                backgroundImage: 'repeating-linear-gradient(45deg, #fff7ed 0, #fff7ed 1px, #fed7aa 0, #fed7aa 50%)',
+                                                backgroundSize: '10px 10px'
+                                            }}
+                                        >
+                                            <div className="bg-white/80 px-1 border border-orange-600">
+                                                <span className="truncate font-black">→ SOLDA</span>
+                                            </div>
                                         </div>
-                                    </div>
+                                    )}
+                                    {/* Reusable scrap */}
+                                    {bar.reusableScrap > 0 && (
+                                        <div
+                                            className="h-full flex items-center justify-center text-amber-800 text-xs font-mono border-l-2 border-dashed border-amber-600 relative"
+                                            style={{
+                                                width: `${(bar.reusableScrap / bar.length) * 100}%`,
+                                                backgroundImage: 'repeating-linear-gradient(45deg, #fffbeb 0, #fffbeb 1px, #fde68a 0, #fde68a 50%)',
+                                                backgroundSize: '10px 10px'
+                                            }}
+                                        >
+                                            <div className="bg-white/80 px-1 border border-amber-600">
+                                                <span className="truncate font-black">{bar.reusableScrap}</span>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {/* True waste (sucata) */}
+                                    {bar.trueWaste > 0 && (
+                                        <div
+                                            className="h-full flex items-center justify-center text-red-800 text-xs font-mono border-l-2 border-dashed border-red-800 relative cursor-not-allowed"
+                                            style={{
+                                                width: `${(bar.trueWaste / bar.length) * 100}%`,
+                                                backgroundImage: 'repeating-linear-gradient(45deg, #fee2e2 0, #fee2e2 1px, #fecaca 0, #fecaca 50%)',
+                                                backgroundSize: '10px 10px'
+                                            }}
+                                        >
+                                            <div className="bg-white/80 px-1 border border-red-800">
+                                                <span className="truncate font-black">{bar.trueWaste}</span>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
 
                                 {/* Visual stacked effect for grouped bars */}

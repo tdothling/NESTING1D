@@ -15,9 +15,24 @@ export default function PrintPage() {
     useEffect(() => {
         const load = async () => {
             try {
-                const projects = await getProjects();
-                const found = projects.find((p: Project) => p.id === projectId);
-                setProject(found || null);
+                // If projectId is 'live', load from sessionStorage (unsaved project from StepResults)
+                if (projectId === 'live') {
+                    const raw = sessionStorage.getItem('nesting1d_print_data');
+                    if (raw) {
+                        const data = JSON.parse(raw);
+                        setProject({
+                            id: 'live',
+                            name: data.name || 'Projeto',
+                            createdAt: data.createdAt || new Date().toISOString(),
+                            requests: data.result?.bars?.flatMap((b: BarResult) => b.cuts) || [],
+                            result: data.result,
+                        } as Project);
+                    }
+                } else {
+                    const projects = await getProjects();
+                    const found = projects.find((p: Project) => p.id === projectId);
+                    setProject(found || null);
+                }
             } catch (e) {
                 console.error(e);
             } finally {
@@ -30,7 +45,7 @@ export default function PrintPage() {
     if (loading) return (
         <div className="flex justify-center items-center h-screen bg-[var(--color-bg)]">
             <div className="border-2 border-[var(--color-ink)] border-dashed p-12">
-                <div className="font-mono text-[var(--color-ink)] animate-pulse uppercase tracking-widest font-bold">GERANDO FICHA DE CORTE...</div>
+                <div className="font-mono text-[var(--color-ink)] animate-pulse uppercase tracking-widest font-bold">GERANDO ORDEM DE CORTE...</div>
             </div>
         </div>
     );
@@ -194,6 +209,12 @@ export default function PrintPage() {
                                                     </div>
 
                                                     <div className="flex gap-2 mt-2 sm:mt-0 font-bold text-xs">
+                                                        {bar.donatedToComposite && bar.donatedToComposite > 0 && (
+                                                            <div className="border border-orange-600 px-2 py-1 flex items-center bg-orange-50">
+                                                                <span className="w-2 h-2 bg-orange-400 mr-2 border border-[var(--color-ink)]"></span>
+                                                                → SOLDA: {bar.donatedToComposite}mm
+                                                            </div>
+                                                        )}
                                                         {bar.reusableScrap > 0 && (
                                                             <div className="border border-[var(--color-ink)] px-2 py-1 flex items-center bg-yellow-50">
                                                                 <span className="w-2 h-2 bg-yellow-400 mr-2 border border-[var(--color-ink)]"></span>
@@ -231,6 +252,16 @@ export default function PrintPage() {
                                                             <span className="bg-white px-1 border border-[var(--color-ink)] relative z-10">{cut.length}</span>
                                                         </div>
                                                     ))}
+
+                                                    {/* Donated to composite (welding) */}
+                                                    {bar.donatedToComposite && bar.donatedToComposite > 0 && (
+                                                        <div
+                                                            style={{ width: `${(bar.donatedToComposite / bar.length) * 100}%` }}
+                                                            className="h-full bg-orange-100 flex items-center justify-center text-orange-800 text-xs font-bold border-r-2 border-dashed border-orange-500 print:bg-white"
+                                                        >
+                                                            <span className="bg-white px-1 border border-orange-600 origin-center">→ SOLDA</span>
+                                                        </div>
+                                                    )}
 
                                                     {bar.reusableScrap > 0 && (
                                                         <div
