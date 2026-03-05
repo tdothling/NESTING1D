@@ -4,8 +4,45 @@ import { NextResponse } from "next/server";
 const apiKey = process.env.GEMINI_API_KEY;
 const ai = apiKey ? new GoogleGenAI({ apiKey }) : null;
 
+// --- Rate Limiting (in-memory) ---
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX = 20; // max requests per window
+const requestLog = new Map<string, number[]>();
+
+function isRateLimited(ip: string): boolean {
+    const now = Date.now();
+    const timestamps = requestLog.get(ip) || [];
+    // Remove entries older than the window
+    const recent = timestamps.filter((t) => now - t < RATE_LIMIT_WINDOW_MS);
+    recent.push(now);
+    requestLog.set(ip, recent);
+    return recent.length > RATE_LIMIT_MAX;
+}
+
+// --- Allowed MIME types ---
+const ALLOWED_MIME_TYPES = [
+    "image/png",
+    "image/jpeg",
+    "image/webp",
+    "image/gif",
+    "application/pdf",
+];
+
+// Max base64 payload size (~10MB decoded ≈ ~13.3MB base64)
+const MAX_BASE64_LENGTH = 14_000_000;
+
 export async function POST(req: Request) {
     try {
+        // Rate limiting
+        const forwarded = req.headers.get("x-forwarded-for");
+        const ip = forwarded?.split(",")[0]?.trim() || "unknown";
+        if (isRateLimited(ip)) {
+            return NextResponse.json(
+                { error: "Too many requests. Please try again later." },
+                { status: 429 }
+            );
+        }
+
         if (!ai) {
             return NextResponse.json({ error: "Server API Key not configured" }, { status: 500 });
         }
@@ -15,6 +52,22 @@ export async function POST(req: Request) {
 
         if (!base64Data || !mimeType) {
             return NextResponse.json({ error: "Missing image/pdf data" }, { status: 400 });
+        }
+
+        // Validate MIME type
+        if (!ALLOWED_MIME_TYPES.includes(mimeType)) {
+            return NextResponse.json(
+                { error: `Invalid file type. Allowed: ${ALLOWED_MIME_TYPES.join(", ")}` },
+                { status: 400 }
+            );
+        }
+
+        // Validate payload size
+        if (typeof base64Data !== "string" || base64Data.length > MAX_BASE64_LENGTH) {
+            return NextResponse.json(
+                { error: "File too large. Maximum size is 10MB." },
+                { status: 413 }
+            );
         }
 
         const prompt = `
@@ -101,7 +154,11 @@ export async function POST(req: Request) {
         const data = JSON.parse(text);
         return NextResponse.json(data);
     } catch (error: any) {
+        // Log full error server-side, return sanitized message to client
         console.error("Server API extraction error:", error);
-        return NextResponse.json({ error: error.message || "Failed to extract data" }, { status: 500 });
+        return NextResponse.json(
+            { error: "Failed to process the document. Please try again." },
+            { status: 500 }
+        );
     }
 }

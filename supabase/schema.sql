@@ -29,7 +29,10 @@ CREATE TABLE IF NOT EXISTS stock (
 -- Note: We are using JSONB in the 'projects' table to store the complex array of 'requests' 
 -- and the deeply nested 'OptimizationResult' object to speed up this initial migration. 
 
--- 3. Fix Row-Level Security (RLS) if you accidentally enabled it and blocked yourself:
--- We will disable it for now so your app can save records normally.
+-- ⚠️ SECURITY TODO: Row-Level Security (RLS) is currently DISABLED.
+-- This means anyone with the Supabase URL + anon key can read/write ALL data.
+-- To fix: 1) Implement Supabase Auth  2) Enable RLS  3) Create policies using auth.uid()
+-- Example policy: CREATE POLICY "Users can only see own projects" ON projects
+--   FOR ALL USING (auth.uid() = user_id);
 ALTER TABLE projects DISABLE ROW LEVEL SECURITY;
 ALTER TABLE stock DISABLE ROW LEVEL SECURITY;
