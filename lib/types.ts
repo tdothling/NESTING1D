@@ -84,3 +84,12 @@ export interface Project {
   result?: OptimizationResult;
   settings?: ProjectSettings;
 }
+
+export interface ProjectSummary {
+  id: string;
+  name: string;
+  createdAt: string;
+  requestCount: number;
+  totalStockUsed: number | null;
+  hasResult: boolean;
+}

@@ -19,9 +19,9 @@ export function Navbar() {
             <div className="hidden sm:flex space-x-0 h-full">
               <Link href="/" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
                 <LayoutDashboard className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
-                <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Dashboard</span>
+                <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Projetos</span>
               </Link>
-              <Link href="/dashboard" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
+              <Link href="/analytics" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
                 <BarChart3 className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
                 <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Analytics</span>
               </Link>
@@ -32,10 +32,6 @@ export function Navbar() {
               <Link href="/optimize" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
                 <Scissors className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
                 <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Otimizar</span>
-              </Link>
-              <Link href="/projects" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
-                <LayoutDashboard className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
-                <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Projetos</span>
               </Link>
             </div>
           </div>

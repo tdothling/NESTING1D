@@ -1,4 +1,4 @@
-import { StockItem, Project, OptimizationResult } from './types';
+import { StockItem, Project, OptimizationResult, ProjectSummary } from './types';
 import { supabase } from './supabase';
 
 export const getStock = async (): Promise<StockItem[]> => {
@@ -75,6 +75,42 @@ export const getProjects = async (): Promise<Project[]> => {
   }));
 };
 
+export const getProjectsSummary = async (): Promise<ProjectSummary[]> => {
+  // Only select the lightweight columns needed for list views
+  const { data: projectsData, error } = await supabase.from('projects').select('id, name, created_at, requests_json, result_json->totalStockUsed').order('created_at', { ascending: false });
+  if (error) {
+    console.error('Error fetching projects summary:', error);
+    return [];
+  }
+
+  return projectsData.map(p => ({
+    id: p.id,
+    name: p.name,
+    createdAt: p.created_at,
+    requestCount: p.requests_json ? Array.isArray(p.requests_json) ? p.requests_json.length : 0 : 0,
+    totalStockUsed: p.totalStockUsed ? Number(p.totalStockUsed) : null,
+    hasResult: p.totalStockUsed !== null && p.totalStockUsed !== undefined
+  }));
+};
+
+export const getProjectById = async (id: string): Promise<Project | null> => {
+  const { data, error } = await supabase.from('projects').select('*').eq('id', id).single();
+
+  if (error || !data) {
+    console.error('Error fetching project by ID:', error);
+    return null;
+  }
+
+  return {
+    id: data.id,
+    name: data.name,
+    createdAt: data.created_at,
+    requests: data.requests_json || [],
+    result: data.result_json || undefined,
+    settings: data.settings_json || undefined,
+  };
+};
+
 // ... further refactoring required for full relational mapping ...
 
 export const addProject = async (project: Project) => {
@@ -108,6 +144,23 @@ export const removeProject = async (id: string) => {
   if (error) console.error('Error removing project:', error);
 };
 
+export const saveNewStockItems = async (items: Omit<StockItem, 'id'>[]) => {
+  if (items.length === 0) return;
+  const { error } = await supabase.from('stock').insert(
+    items.map(item => ({
+      material: item.material,
+      profile_id: item.profileId || null,
+      length: item.length,
+      quantity: item.quantity,
+      weight_kg_m: item.weightKgM || 0,
+      price_per_kg: item.pricePerKg || 0,
+      is_scrap: item.isScrap,
+      origin_project_id: item.originProjectId || null
+    }))
+  );
+  if (error) console.error('Error saving new stock items:', error);
+};
+
 export const updateStockQuantity = async (id: string, newQuantity: number) => {
   const { error } = await supabase.from('stock').update({ quantity: newQuantity }).eq('id', id);
   if (error) console.error('Error updating stock:', error);
@@ -115,43 +168,35 @@ export const updateStockQuantity = async (id: string, newQuantity: number) => {
 
 export const updateStockFromOptimization = async (result: OptimizationResult, projectId: string) => {
   const stock = await getStock();
+  const modifiedStockIds = new Set<string>();
 
   // 1. Consume used stock (Grouped)
-  const consumedStockUpdates: Record<string, number> = {};
   for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
       const item = stock.find(s => s.id === bar.sourceId);
       if (item && item.quantity > 0) {
-        // Keep tracking the new decremented quantity
-        consumedStockUpdates[item.id] = (consumedStockUpdates[item.id] ?? item.quantity) - 1;
         item.quantity -= 1; // Update local memory reference
+        modifiedStockIds.add(item.id);
       }
     }
   }
 
-  // Execute consumed stock updates
-  for (const id of Object.keys(consumedStockUpdates)) {
-    await updateStockQuantity(id, consumedStockUpdates[id]);
-  }
-
-
   // 2. Add reusable scraps back to stock (Grouped)
   const MIN_SCRAP_LENGTH = 50;
-
-  const existingScrapUpdates: Record<string, number> = {};
-  const newScrapsToAdd: Record<string, { material: string, profileId?: string, weightKgM?: number, length: number, quantity: number }> = {};
+  const newScrapsToAdd: Record<string, Omit<StockItem, 'id'>> = {};
 
   for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
-      // Find the source item in stock to get its profileId and weight
       let sourceProfileId: string | undefined = bar.profileId;
       let sourceWeightKgM: number = bar.weightKgM || 0;
+      let sourcePricePerKg: number = 0;
 
       if (bar.sourceId && bar.sourceId !== 'new-standard') {
         const sourceItem = stock.find(s => s.id === bar.sourceId);
         if (sourceItem) {
           sourceProfileId = sourceItem.profileId || sourceProfileId;
           sourceWeightKgM = sourceItem.weightKgM || sourceWeightKgM;
+          sourcePricePerKg = sourceItem.pricePerKg || 0;
         }
       }
 
@@ -163,8 +208,8 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
       );
 
       if (existingScrap) {
-        existingScrapUpdates[existingScrap.id] = (existingScrapUpdates[existingScrap.id] ?? existingScrap.quantity) + 1;
         existingScrap.quantity += 1;
+        modifiedStockIds.add(existingScrap.id);
       } else {
         const hash = `${bar.material}|${sourceProfileId || 'no-profile'}|${bar.reusableScrap}`;
         if (!newScrapsToAdd[hash]) {
@@ -172,8 +217,11 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
             material: bar.material,
             profileId: sourceProfileId,
             weightKgM: sourceWeightKgM,
+            pricePerKg: sourcePricePerKg,
             length: bar.reusableScrap,
-            quantity: 1
+            quantity: 1,
+            isScrap: true,
+            originProjectId: projectId
           };
         } else {
           newScrapsToAdd[hash].quantity += 1;
@@ -182,23 +230,16 @@ export const updateStockFromOptimization = async (result: OptimizationResult, pr
     }
   }
 
-  // Execute existing scrap increments
-  for (const id of Object.keys(existingScrapUpdates)) {
-    await updateStockQuantity(id, existingScrapUpdates[id]);
+  // Execute Bulk Upserts
+  const itemsToUpsert = stock.filter(s => modifiedStockIds.has(s.id));
+  if (itemsToUpsert.length > 0) {
+    await saveStock(itemsToUpsert);
   }
 
-  // Execute grouped new scrap additions (instead of 14 separate DB writes of qty 1)
-  for (const hash of Object.keys(newScrapsToAdd)) {
-    const scrapInfo = newScrapsToAdd[hash];
-    await saveStockItem({
-      material: scrapInfo.material,
-      profileId: scrapInfo.profileId,
-      weightKgM: scrapInfo.weightKgM,
-      length: scrapInfo.length,
-      quantity: scrapInfo.quantity,
-      isScrap: true,
-      originProjectId: undefined
-    });
+  // Execute Bulk Inserts
+  const newItemsToInsert = Object.values(newScrapsToAdd);
+  if (newItemsToInsert.length > 0) {
+    await saveNewStockItems(newItemsToInsert);
   }
 };
 
@@ -209,9 +250,10 @@ export const rollbackStock = async (projectId: string) => {
 
   // 1. Remove scraps generated
   const stock = await getStock();
+  const modifiedStockIds = new Set<string>();
+  const idsToDelete = new Set<string>();
   const MIN_SCRAP_LENGTH = 50;
 
-  const scrapsToRemove: Record<string, number> = {};
   for (const bar of result.bars) {
     if (bar.reusableScrap >= MIN_SCRAP_LENGTH) {
       let sourceProfileId: string | undefined = bar.profileId;
@@ -227,41 +269,66 @@ export const rollbackStock = async (projectId: string) => {
         s.profileId === sourceProfileId
       );
       if (existingScrap) {
-        scrapsToRemove[existingScrap.id] = (scrapsToRemove[existingScrap.id] ?? 0) + 1;
-      }
-    }
-  }
-
-  for (const id of Object.keys(scrapsToRemove)) {
-    const item = stock.find(s => s.id === id);
-    if (item) {
-      const newQty = item.quantity - scrapsToRemove[id];
-      if (newQty <= 0) {
-        await supabase.from('stock').delete().eq('id', id);
-      } else {
-        await updateStockQuantity(id, newQty);
-        item.quantity = newQty; // update local ref
+        existingScrap.quantity -= 1;
+        if (existingScrap.quantity <= 0) {
+          idsToDelete.add(existingScrap.id);
+          modifiedStockIds.delete(existingScrap.id);
+        } else {
+          modifiedStockIds.add(existingScrap.id);
+        }
       }
     }
   }
 
   // 2. Add back consumed items
+  const newItemsToInsert: Omit<StockItem, 'id'>[] = [];
   for (const bar of result.bars) {
     if (bar.sourceId && bar.sourceId !== 'new-standard') {
       const existing = stock.find(s => s.id === bar.sourceId);
       if (existing) {
-        await updateStockQuantity(existing.id, existing.quantity + 1);
         existing.quantity += 1;
+        if (idsToDelete.has(existing.id)) {
+          idsToDelete.delete(existing.id); // it resurrected!
+        }
+        modifiedStockIds.add(existing.id);
       } else {
-        await saveStockItem({
+        newItemsToInsert.push({
           material: bar.material,
           profileId: bar.profileId,
           weightKgM: bar.weightKgM,
+          pricePerKg: 0,
           length: bar.length,
           quantity: 1,
           isScrap: bar.isScrapUsed,
         });
       }
     }
+  }
+
+  // Execute Deletes
+  if (idsToDelete.size > 0) {
+    const idArray = Array.from(idsToDelete);
+    await supabase.from('stock').delete().in('id', idArray);
+  }
+
+  // Execute Upserts
+  const itemsToUpsert = stock.filter(s => modifiedStockIds.has(s.id));
+  if (itemsToUpsert.length > 0) {
+    await saveStock(itemsToUpsert);
+  }
+
+  // Execute Inserts
+  const groupedInserts: Record<string, Omit<StockItem, 'id'>> = {};
+  for (const item of newItemsToInsert) {
+    const hash = `${item.material}|${item.profileId || 'no'}|${item.length}|${item.isScrap}`;
+    if (!groupedInserts[hash]) {
+      groupedInserts[hash] = item;
+    } else {
+      groupedInserts[hash].quantity += 1;
+    }
+  }
+  const groupedArray = Object.values(groupedInserts);
+  if (groupedArray.length > 0) {
+    await saveNewStockItems(groupedArray);
   }
 };

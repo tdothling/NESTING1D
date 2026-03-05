@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback, Suspense } from 'react';
 import { Navbar } from '@/components/Navbar';
 import { extractTableData } from '@/lib/gemini';
 import { parseSpreadsheet } from '@/lib/spreadsheet';
-import { getStock, addProject, updateProject, updateStockFromOptimization, getProjects, rollbackStock } from '@/lib/store';
+import { getStock, addProject, updateProject, updateStockFromOptimization, getProjectById, rollbackStock } from '@/lib/store';
 import { CutRequest, StockItem, OptimizationResult, Project } from '@/lib/types';
 import { toast } from 'sonner';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -39,8 +39,7 @@ function OptimizeContent() {
         setStock(await getStock());
 
         if (projectId) {
-          const projects = await getProjects();
-          const loadedProject = projects.find((p: Project) => p.id === projectId);
+          const loadedProject = await getProjectById(projectId);
           if (loadedProject) {
             setProjectName(loadedProject.name);
             setRequests(loadedProject.requests);

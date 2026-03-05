@@ -2,22 +2,23 @@
 
 import { useEffect, useState } from 'react';
 import { Navbar } from '@/components/Navbar';
-import { getProjects, getStock, removeProject, rollbackStock } from '@/lib/store';
-import { Project, StockItem } from '@/lib/types';
+import { getProjectsSummary, getStock, removeProject, rollbackStock } from '@/lib/store';
+import { ProjectSummary, StockItem } from '@/lib/types';
 import Link from 'next/link';
 import { Plus, Package, Scissors, Trash2, ArrowRight } from 'lucide-react';
 import { toast } from 'sonner';
 
 export default function Dashboard() {
-  const [projects, setProjects] = useState<Project[]>([]);
+  const [projects, setProjects] = useState<ProjectSummary[]>([]);
   const [stock, setStock] = useState<StockItem[]>([]);
   const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
       try {
-        const [projectsData, stockData] = await Promise.all([getProjects(), getStock()]);
+        const [projectsData, stockData] = await Promise.all([getProjectsSummary(), getStock()]);
         setProjects(projectsData);
         setStock(stockData);
       } catch (error) {
@@ -35,7 +36,7 @@ export default function Dashboard() {
     if (confirm('Tem certeza que deseja excluir este projeto? O estoque consumido será devolvido.')) {
       await rollbackStock(id);
       await removeProject(id);
-      setProjects(await getProjects());
+      setProjects(await getProjectsSummary());
       setStock(await getStock());
       toast.success('Projeto excluído e estoque revertido com sucesso.');
     }
@@ -43,6 +44,8 @@ export default function Dashboard() {
 
   const totalScrap = stock.filter(s => s.isScrap).reduce((acc, s) => acc + s.quantity, 0);
   const totalBars = stock.filter(s => !s.isScrap).reduce((acc, s) => acc + s.quantity, 0);
+
+  const filteredProjects = projects.filter(p => p.name.toLowerCase().includes(searchTerm.toLowerCase()));
 
   return (
     <div className="min-h-screen bg-[var(--color-bg)] selection:bg-[var(--color-ink)] selection:text-[var(--color-bg)]">
@@ -103,19 +106,33 @@ export default function Dashboard() {
 
             {/* Projetos Recentes */}
             <div>
-              <div className="flex items-center justify-between mb-6 border-b-4 border-[var(--color-ink)] pb-4">
+              <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b-4 border-[var(--color-ink)] pb-4 mb-6 gap-4">
                 <div className="flex items-center space-x-4">
                   <div className="w-3 h-8 bg-[var(--color-accent)]"></div>
                   <h2 className="text-2xl font-black text-[var(--color-ink)] font-mono uppercase tracking-widest">
-                    Últimas Execuções
+                    Projetos
                   </h2>
+                </div>
+
+                <div className="relative w-full sm:w-80 border-2 border-[var(--color-ink)] bg-white group focus-within:border-[var(--color-accent)] transition-colors">
+                  <input
+                    type="text"
+                    className="block w-full px-4 py-2 bg-transparent border-none focus:outline-none focus:ring-0 font-mono font-bold uppercase placeholder-[var(--color-ink)] placeholder-opacity-50 text-[var(--color-ink)]"
+                    placeholder="BUSCAR PROJETO..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
 
-              {projects.length === 0 ? (
+              {loading ? (
+                <div className="p-16 text-center border-b-2 border-dashed border-[var(--color-ink)] bg-[var(--color-bg)]">
+                  <span className="font-mono font-black text-xl uppercase tracking-widest animate-pulse text-[var(--color-ink)]">CARREGANDO PROJETOS...</span>
+                </div>
+              ) : filteredProjects.length === 0 ? (
                 <div className="border-4 border-[var(--color-ink)] border-dashed p-12 text-center flex flex-col items-center justify-center bg-[var(--color-bg)]">
                   <Scissors className="w-12 h-12 mb-4 opacity-50 text-[var(--color-ink)]" />
-                  <p className="font-mono uppercase font-black text-xl text-[var(--color-ink)]">SEM REGISTROS DE CORTE.</p>
+                  <p className="font-mono uppercase font-black text-xl text-[var(--color-ink)]">NENHUM PROJETO.</p>
                   <p className="font-mono text-sm opacity-70 mt-2 font-bold uppercase tracking-widest text-[var(--color-ink)]">INICIE UM NOVO PROJETO PARA POPULAR ESTA BASE.</p>
                 </div>
               ) : (
@@ -128,8 +145,8 @@ export default function Dashboard() {
                   </div>
 
                   <ul className="divide-y-4 divide-[var(--color-ink)]">
-                    {projects.map((project, index) => {
-                      const hasResult = !!project.result;
+                    {filteredProjects.map((project, index) => {
+                      const hasResult = project.hasResult;
                       const dateFormated = new Date(project.createdAt).toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' });
 
                       return (
@@ -161,12 +178,12 @@ export default function Dashboard() {
                           <div className="col-span-3 p-4 flex sm:justify-center items-center border-b-2 sm:border-b-0 border-dashed border-[var(--color-ink)] border-opacity-20 sm:border-r-2 sm:border-solid">
                             <span className="text-[10px] font-bold uppercase tracking-widest opacity-60 sm:hidden mr-2">VOLUME:</span>
                             <div className="flex items-baseline space-x-1">
-                              <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.requests.length}</span>
+                              <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.requestCount}</span>
                               <span className="font-mono text-xs font-bold opacity-60 uppercase tracking-widest">PÇS</span>
                               {hasResult && (
                                 <>
                                   <span className="font-mono text-xl text-[var(--color-ink)] opacity-30 mx-1">/</span>
-                                  <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.result?.totalStockUsed}</span>
+                                  <span className="font-mono font-black text-xl text-[var(--color-ink)]">{project.totalStockUsed}</span>
                                   <span className="font-mono text-xs font-bold opacity-60 uppercase tracking-widest">BRS</span>
                                 </>
                               )}
