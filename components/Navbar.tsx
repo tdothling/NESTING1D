@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import { LayoutDashboard, Package, Scissors, Settings } from 'lucide-react';
+import { LayoutDashboard, Package, Scissors, Settings, BarChart3 } from 'lucide-react';
 
 export function Navbar() {
   return (
@@ -20,6 +20,10 @@ export function Navbar() {
               <Link href="/" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
                 <LayoutDashboard className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
                 <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Dashboard</span>
+              </Link>
+              <Link href="/dashboard" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
+                <BarChart3 className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
+                <span className="font-mono text-sm font-bold uppercase tracking-widest text-[var(--color-ink)] group-hover:text-[var(--color-bg)]">Analytics</span>
               </Link>
               <Link href="/inventory" className="group h-full flex items-center px-6 border-r border-[var(--color-ink)] border-opacity-30 hover:bg-[var(--color-ink)] transition-colors">
                 <Package className="w-5 h-5 mr-3 text-[var(--color-ink)] group-hover:text-[var(--color-bg)]" />
