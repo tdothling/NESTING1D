@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { Upload, RefreshCw, FileSpreadsheet, HardDriveUpload } from 'lucide-react';
 
@@ -30,6 +30,28 @@ export function StepUploader({ onDrop, onSpreadsheet, loading, onManualEntry }: 
         },
         multiple: false,
     });
+
+    // Handle global paste event for images
+    useEffect(() => {
+        const handlePaste = (e: ClipboardEvent) => {
+            if (loading) return;
+            const items = e.clipboardData?.items;
+            if (!items) return;
+
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type.indexOf('image') !== -1) {
+                    const file = items[i].getAsFile();
+                    if (file) {
+                        onDrop([file]);
+                    }
+                    break; // Handle only the first image
+                }
+            }
+        };
+
+        window.addEventListener('paste', handlePaste);
+        return () => window.removeEventListener('paste', handlePaste);
+    }, [onDrop, loading]);
 
     return (
         <div className="w-full max-w-4xl mx-auto space-y-8 font-mono">
@@ -66,8 +88,8 @@ export function StepUploader({ onDrop, onSpreadsheet, loading, onManualEntry }: 
                             <h3 className="text-xl font-black uppercase tracking-widest border-b-2 border-current pb-2 mb-4">
                                 LEITURA POR IA
                             </h3>
-                            <p className="text-sm font-bold opacity-80 uppercase tracking-widest mb-4 leading-relaxed max-w-[250px]">
-                                ARRASTE OU SELECIONE IMAGEM / PDF DO PROJETO
+                            <p className="text-sm font-bold opacity-80 uppercase tracking-widest mb-4 leading-relaxed max-w-[270px]">
+                                ARRASTE, SELECIONE OU COLE (CTRL+V) A IMAGEM / PDF DO PROJETO
                             </p>
                             <div className="border border-current px-3 py-1 text-[10px] font-bold tracking-widest opacity-60">
                                 FORMATOS: PNG, JPG, WEBP, PDF
